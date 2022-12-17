@@ -56,7 +56,8 @@ class Data:
         self.endTime = endTime
         self.idx = self.df.loc[startTime:endTime].index
 
-    def type_setting(self, df_ohlc, entryLong, entrySellShort, exitShort, exitBuyToCover, vol_type='ATR', vol_length=22):
+    def type_setting(self, df_ohlc, entryLong, entrySellShort, exitShort, exitBuyToCover, 
+                     vol_type='ATR', vol_length=22, longOnly=False, shortOnly=False):
         self.open_arr = np.array(df_ohlc['Open'].loc[self.startTime:self.endTime])
         self.high_arr = np.array(df_ohlc['High'].loc[self.startTime:self.endTime])
         self.low_arr = np.array(df_ohlc['Low'].loc[self.startTime:self.endTime])
@@ -65,6 +66,16 @@ class Data:
         self.entrySellShort_arr = np.array(entrySellShort.loc[self.startTime:self.endTime])
         self.exitShort_arr = np.array(exitShort.loc[self.startTime:self.endTime])
         self.exitBuyToCover_arr = np.array(exitBuyToCover.loc[self.startTime:self.endTime])
+
+        if longOnly == True:
+            noSignal = pd.Series([False]*len(df_ohlc.index), index=df_ohlc.index)
+            self.entrySellShort_arr = np.array(noSignal.loc[self.startTime:self.endTime])
+            self.exitBuyToCover_arr = np.array(noSignal.loc[self.startTime:self.endTime])
+
+        if shortOnly == True:
+            noSignal = pd.Series([False]*len(df_ohlc.index), index=df_ohlc.index)
+            self.entryLong_arr = np.array(noSignal.loc[self.startTime:self.endTime])
+            self.exitShort_arr_arr = np.array(noSignal.loc[self.startTime:self.endTime])
 
         if vol_type == 'STD':
             std_df = df_ohlc['Close'].rolling(vol_length).std()
@@ -77,5 +88,4 @@ class Data:
                                    self.entryLong_arr, self.entrySellShort_arr, 
                                    self.exitShort_arr, self.exitBuyToCover_arr, 
                                    self.vol_arr])
-
 
