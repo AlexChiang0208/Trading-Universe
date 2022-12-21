@@ -199,6 +199,7 @@ class Performance:
         self.df_price = df_price
         self.buy = output_dict['buy']
         self.sell = output_dict['sell']
+        self.trades = len(output_dict['buy']) + len(output_dict['sell'])
         self.sellshort = output_dict['sellshort']
         self.buytocover = output_dict['buytocover']
         self.profit_list = output_dict['profit_list']
@@ -291,5 +292,4 @@ class Performance:
         print(f'winLossRatio: {winLossRatio}')
 
         return
-
 
