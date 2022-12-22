@@ -7,7 +7,8 @@ from numba import jit
 def backtesting(input_arr, fund=100, leverage=0, takerFee=0.0004, slippage=0.0008,
                 exit_timeOut=False, exParam1=20, from_exit_condition=False,
                 exit_profitOut=False, exParam2=0.02, end_trigger2='C',
-                exit_lossOut=False, lossOut_condition=1, exParam3=0.05, start_trigger3='C', end_trigger3='C',
+                exit_lossOut=False, lossOut_condition=1, exParam3=0.05, start_trigger3='C', 
+                end_trigger3='C', risk_control=False, rc_percent=0.5,
                 exit_condition=1, exParam0=0, end_trigger0='C'
                 ):
 
@@ -49,6 +50,7 @@ def backtesting(input_arr, fund=100, leverage=0, takerFee=0.0004, slippage=0.000
     stopLoss = False
     stopProfit = False
     stopTime = False
+    riskControlSwitch = False
     ts = 1
     ts2 = 1
     t = 0
@@ -204,6 +206,10 @@ def backtesting(input_arr, fund=100, leverage=0, takerFee=0.0004, slippage=0.000
                         else:
                             stopLoss = False
 
+                ## when touch stopLoss, control risk after next trade
+                if LS != '' and risk_control == True and stopLoss == True:
+                    riskControlSwitch = True
+
         # start exit condition
         if LS != '' and exitSwitch == False:
 
@@ -305,11 +311,20 @@ def backtesting(input_arr, fund=100, leverage=0, takerFee=0.0004, slippage=0.000
                 profit_list_realized.append(0)
                 profit_fee_list_realized.append(0)
                 profit_fee_list_realized_time.append(t)
-                if leverage == 0:
-                    orderMoney = fund_money
-                else:
-                    orderMoney = fund * leverage
+
+                if riskControlSwitch == False:
+                    if leverage == 0:
+                        orderMoney = fund_money
+                    else:
+                        orderMoney = fund * leverage
+                elif riskControlSwitch == True:
+                    if leverage == 0:
+                        orderMoney = fund_money * rc_percent
+                    else:
+                        orderMoney = fund * leverage * rc_percent
+
                 orderSize = orderMoney / open_arr[i+1]
+
                 ts = 1
                 ts2 = 1
                 exitSwitch = False
@@ -355,6 +370,10 @@ def backtesting(input_arr, fund=100, leverage=0, takerFee=0.0004, slippage=0.000
                 profit_fee_list_realized.append(profit_fee_realized)
                 profit_fee_list_realized_time.append(i+1)
 
+                # close riskControlSwitch
+                if riskControlSwitch == True and profit_fee_realized > 0:
+                    riskControlSwitch = False
+
                 # reset stop condition
                 exitSwitch = False
                 stopLoss = False
@@ -371,10 +390,18 @@ def backtesting(input_arr, fund=100, leverage=0, takerFee=0.0004, slippage=0.000
                     LS = 'S'
                     t = i+1
                     sellshort.append(t)
-                    if leverage == 0:
-                        orderMoney = fund_money
-                    else:
-                        orderMoney = fund * leverage
+
+                    if riskControlSwitch == False:
+                        if leverage == 0:
+                            orderMoney = fund_money
+                        else:
+                            orderMoney = fund * leverage
+                    elif riskControlSwitch == True:
+                        if leverage == 0:
+                            orderMoney = fund_money * rc_percent
+                        else:
+                            orderMoney = fund * leverage * rc_percent
+
                     orderSize = orderMoney / open_arr[i+1]
 
                     if exit_condition == 1 and exParam0 == 0:
@@ -422,6 +449,10 @@ def backtesting(input_arr, fund=100, leverage=0, takerFee=0.0004, slippage=0.000
                 profit_fee_list_realized.append(profit_fee_realized)
                 profit_fee_list_realized_time.append(i+1)
 
+                # close riskControlSwitch
+                if riskControlSwitch == True and profit_fee_realized > 0:
+                    riskControlSwitch = False
+
                 # reset stop condition
                 exitSwitch = False
                 stopLoss = False
@@ -438,10 +469,18 @@ def backtesting(input_arr, fund=100, leverage=0, takerFee=0.0004, slippage=0.000
                     LS = 'L'
                     t = i+1
                     buy.append(t)
-                    if leverage == 0:
-                        orderMoney = fund_money
-                    else:
-                        orderMoney = fund * leverage
+
+                    if riskControlSwitch == False:
+                        if leverage == 0:
+                            orderMoney = fund_money
+                        else:
+                            orderMoney = fund * leverage
+                    elif riskControlSwitch == True:
+                        if leverage == 0:
+                            orderMoney = fund_money * rc_percent
+                        else:
+                            orderMoney = fund * leverage * rc_percent
+
                     orderSize = orderMoney / open_arr[i+1]
 
                     if exit_condition == 1 and exParam0 == 0:
@@ -467,5 +506,4 @@ def dictType_output(output_tuple):
                    'profit_fee_list_realized': output_tuple[7], 'profit_fee_list_realized_time': output_tuple[8]}
     
     return output_dict
-
 
