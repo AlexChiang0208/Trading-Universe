@@ -13,6 +13,7 @@
   * (4) 跌破近 exParam3 根的低點出場
     * start_trigger3 = "HL" or "C" (如 : 高點滑落的高點 ; 近幾根低點)
     * end_trigger3 = "HL" or "C" (如 : 跌破是 close 跌破還是 low 跌破)
+    * risk_control = True : 碰停損後的下次以 rc_percent 比例進場，直到獲利交易為止
 * 開啟出場條件 (exit_condition)
   * (1) 進場 exParam0 根後開啟 (預設0, 進場即開啟)
   * (2) 賺 exParam0% 後
