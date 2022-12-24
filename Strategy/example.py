@@ -19,8 +19,8 @@ from module.visualize import Performance, PercentageReturnPlot
 
 # %%
 
-df_btc_origin = get_tidyData(file_name='binance_um_1m_btcusdt', _type='single')
-# df_eth_origin = get_tidyData(file_name='binance_um_1m_ethusdt', _type='single')
+df_btc_origin = get_tidyData(file_name='binance_um_1m_btcusdt')
+# df_eth_origin = get_tidyData(file_name='binance_um_1m_ethusdt')
 
 # %%
 
@@ -42,7 +42,7 @@ entrySellShort =  (data.df['rsi_r1'] < data.df['rsi_r2']) & (data.df['rsi_r1'] <
 exitShort = data.df['rsi_r1'] < 30
 exitBuyToCover = data.df['rsi_r1'] > 70
 
-data.type_setting(data.df, entryLong, entrySellShort, exitShort, exitBuyToCover)
+data.type_setting(entryLong, entrySellShort, exitShort, exitBuyToCover)
 output_dict = dictType_output(backtesting(data.input_arr, exit_profitOut=True, exParam2=0.015, end_trigger2='C', fund=fund))
 
 # plot & result
