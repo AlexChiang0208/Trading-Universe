@@ -47,9 +47,9 @@ RSI Strategy in example.py
 ![output6](https://user-images.githubusercontent.com/77842290/207235017-22acd140-9a23-4dc1-980a-afc2dc4d832f.png)
 
 ## 支援
-1. Numba @jit 加速運算
-2. 考慮翻單的獲利情況
+1. 考慮翻單的獲利情況
+2. Numba @jit 加速運算
 3. 內建超過 36 種停利停損出場方式
-4. 配對交易回測 (開發中)
+4. 配對交易回測 - 等資金下注
 5. 因子強度統計檢定 (未公開)
 
