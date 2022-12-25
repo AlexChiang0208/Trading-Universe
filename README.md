@@ -23,7 +23,7 @@ Modular backtesting tools (Python)
 
 ## Example
 
-RSI Strategy in example.py
+RSI Strategy in singleTrade_example.py
 
 #### result.show_performance()
 ![Screen Shot 2022-12-13 at 1 35 11 PM](https://user-images.githubusercontent.com/77842290/207235117-bf705239-d101-44aa-a62b-d364501baa66.png)
