@@ -144,6 +144,9 @@ class DataPair:
     def type_setting(self, entryLong, entrySellShort, exitShort, exitBuyToCover, spread_value='Close',
                      vol_type='STD', vol_value='Qt5', vol_length=22, longOnly=False, shortOnly=False):
 
+        '''spread_arr use "Close" is same with single backtesting situation'''
+
+        self.spreadOpen_arr = np.array(self.df_pair['Open'].loc[self.startTime:self.endTime])
         self.spread_arr = np.array(self.df_pair[spread_value].loc[self.startTime:self.endTime])
         self.openA_arr = np.array(self.dfA['Open'].loc[self.startTime:self.endTime])
         self.openB_arr = np.array(self.dfB['Open'].loc[self.startTime:self.endTime])
@@ -171,7 +174,8 @@ class DataPair:
             atr_df = talib.ATR(self.df_pair['High'], self.df_pair['Low'], self.df_pair['Close'], vol_length)
             self.vol_arr = np.array(atr_df.loc[self.startTime:self.endTime])
 
-        self.input_arr = np.array([self.spread_arr, self.openA_arr, self.openB_arr, 
+        self.input_arr = np.array([self.spreadOpen_arr, self.spread_arr, 
+                                   self.openA_arr, self.openB_arr, 
                                    self.closeA_arr, self.closeB_arr, 
                                    self.entryLong_arr, self.entrySellShort_arr, 
                                    self.exitShort_arr, self.exitBuyToCover_arr, 
