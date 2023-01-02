@@ -47,7 +47,7 @@ RSI Strategy in singleTrade_example.py
 ![output6](https://user-images.githubusercontent.com/77842290/207235017-22acd140-9a23-4dc1-980a-afc2dc4d832f.png)
 
 ## 支援
-1. 考慮翻單的獲利情況
+1. 考慮翻單的獲利情況 (假如出場時滿足對邊進場條件)
 2. Numba @jit 加速運算
 3. 內建超過 36 種停利停損出場方式
 4. 配對交易回測 - 等資金下注
