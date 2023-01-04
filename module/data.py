@@ -1,16 +1,36 @@
+import glob
 import numpy as np
 import pandas as pd
 import datetime as dt
+from tqdm import tqdm
 
 import talib
 from talib import abstract
 
 
-def get_tidyData(file_name):
-    
-    df_ = pd.read_csv(f'tidy_data/{file_name}.csv', parse_dates=True, index_col='openTime')
-    df_.index = [i+dt.timedelta(minutes=1) for i in df_.index]
-    df_ = df_.drop('closeTime', axis=1)
+def get_tidyData(symbol='BTCUSDT', data_type='ufutures'):
+
+    columns_name = ['openTime', 'Open', 'High', 'Low', 'Close', 'Volume', 'closeTime', 'quoteVolume', 'numTrade', 'takerBuyVolume', 'takerBuyQuoteVolume', 'ignore']
+    ticker_path = glob.glob(f"raw_klines/{symbol}_{data_type}/*.zip")
+    ticker_path = sorted(ticker_path)
+
+    combine_list = []
+    for path in tqdm(ticker_path):
+        temp = pd.read_csv(path, header=None, index_col=None)
+        if temp.iloc[0,0] == "open_time":
+            temp = temp.iloc[1:]
+        combine_list.append(temp)
+
+    df_ = pd.concat(combine_list, axis=0)
+    df_.columns = columns_name
+    df_['openTime']= pd.to_datetime(df_['openTime'], unit='ms')
+    df_ = df_.drop(['ignore', 'closeTime'], axis=1)
+    df_ = df_.sort_values('openTime', ascending=True)
+    df_ = df_.set_index('openTime')
+    df_ = df_.astype(float)
+    df_['takerSellVolume'] = df_['Volume'] - df_['takerBuyVolume']
+    df_['takerSellQuoteVolume'] = df_['quoteVolume'] - df_['takerBuyQuoteVolume']
+    df_['avgTradeVolume'] = df_['quoteVolume'] / df_['numTrade']
 
     return df_
 
@@ -19,12 +39,12 @@ def resample_symbol(df_symbol, rule='1H'):
 
     df_ = pd.DataFrame()
 
-    df_['Open'] = df_symbol.resample(rule=rule, closed='right', label='right').first()['Open']
-    df_['High'] = df_symbol.resample(rule=rule, closed='right', label='right').max()['High']
-    df_['Low'] = df_symbol.resample(rule=rule, closed='right', label='right').min()['Low']
-    df_['Close'] = df_symbol.resample(rule=rule, closed='right', label='right').last()['Close']
+    df_['Open'] = df_symbol.resample(rule=rule, closed='left', label='left').first()['Open']
+    df_['High'] = df_symbol.resample(rule=rule, closed='left', label='left').max()['High']
+    df_['Low'] = df_symbol.resample(rule=rule, closed='left', label='left').min()['Low']
+    df_['Close'] = df_symbol.resample(rule=rule, closed='left', label='left').last()['Close']
 
-    summ = df_symbol.resample(rule=rule, closed='right', label='right').sum()
+    summ = df_symbol.resample(rule=rule, closed='left', label='left').sum()
 
     df_['Volume'] = summ['Volume']
     df_['quoteVolume'] = summ['quoteVolume']
@@ -48,22 +68,22 @@ def resample_pair(df_symbolA, df_symbolB, rule='1H'):
 
     df_pair_ = pd.DataFrame()
 
-    df_pair_['Open'] = df_spread_open.resample(rule=rule, closed='right', label='right').first()
-    df_pair_['High'] = df_spread_close.resample(rule=rule, closed='right', label='right').max()
-    df_pair_['Low'] = df_spread_close.resample(rule=rule, closed='right', label='right').min()
-    df_pair_['Close'] = df_spread_close.resample(rule=rule, closed='right', label='right').last()
-    df_pair_['Volume'] = df_spread_volume.resample(rule=rule, closed='right', label='right').sum()
-    df_pair_['Mean'] = df_spread_close.resample(rule=rule, closed='right', label='right').mean()
-    df_pair_['Volatility'] = df_spread_close.resample(rule=rule, closed='right', label='right').std()
-    df_pair_['Qt1'] = df_spread_close.resample(rule=rule, closed='right', label='right').quantile(0.1)
-    df_pair_['Qt2'] = df_spread_close.resample(rule=rule, closed='right', label='right').quantile(0.2)
-    df_pair_['Qt3'] = df_spread_close.resample(rule=rule, closed='right', label='right').quantile(0.3)
-    df_pair_['Qt4'] = df_spread_close.resample(rule=rule, closed='right', label='right').quantile(0.4)
-    df_pair_['Qt5'] = df_spread_close.resample(rule=rule, closed='right', label='right').quantile(0.5)
-    df_pair_['Qt6'] = df_spread_close.resample(rule=rule, closed='right', label='right').quantile(0.6)
-    df_pair_['Qt7'] = df_spread_close.resample(rule=rule, closed='right', label='right').quantile(0.7)
-    df_pair_['Qt8'] = df_spread_close.resample(rule=rule, closed='right', label='right').quantile(0.8)
-    df_pair_['Qt9'] = df_spread_close.resample(rule=rule, closed='right', label='right').quantile(0.9)
+    df_pair_['Open'] = df_spread_open.resample(rule=rule, closed='left', label='left').first()
+    df_pair_['High'] = df_spread_close.resample(rule=rule, closed='left', label='left').max()
+    df_pair_['Low'] = df_spread_close.resample(rule=rule, closed='left', label='left').min()
+    df_pair_['Close'] = df_spread_close.resample(rule=rule, closed='left', label='left').last()
+    df_pair_['Volume'] = df_spread_volume.resample(rule=rule, closed='left', label='left').sum()
+    df_pair_['Mean'] = df_spread_close.resample(rule=rule, closed='left', label='left').mean()
+    df_pair_['Volatility'] = df_spread_close.resample(rule=rule, closed='left', label='left').std()
+    df_pair_['Qt1'] = df_spread_close.resample(rule=rule, closed='left', label='left').quantile(0.1)
+    df_pair_['Qt2'] = df_spread_close.resample(rule=rule, closed='left', label='left').quantile(0.2)
+    df_pair_['Qt3'] = df_spread_close.resample(rule=rule, closed='left', label='left').quantile(0.3)
+    df_pair_['Qt4'] = df_spread_close.resample(rule=rule, closed='left', label='left').quantile(0.4)
+    df_pair_['Qt5'] = df_spread_close.resample(rule=rule, closed='left', label='left').quantile(0.5)
+    df_pair_['Qt6'] = df_spread_close.resample(rule=rule, closed='left', label='left').quantile(0.6)
+    df_pair_['Qt7'] = df_spread_close.resample(rule=rule, closed='left', label='left').quantile(0.7)
+    df_pair_['Qt8'] = df_spread_close.resample(rule=rule, closed='left', label='left').quantile(0.8)
+    df_pair_['Qt9'] = df_spread_close.resample(rule=rule, closed='left', label='left').quantile(0.9)
 
     dfA_ = resample_symbol(df_symbolA, rule=rule)
     dfB_ = resample_symbol(df_symbolB, rule=rule)
