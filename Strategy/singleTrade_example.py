@@ -19,8 +19,8 @@ from module.visualize import Performance, PercentageReturnPlot
 
 # %%
 
-df_btc_origin = get_tidyData(file_name='binance_um_1m_btcusdt')
-# df_eth_origin = get_tidyData(file_name='binance_um_1m_ethusdt')
+df_btc_origin = get_tidyData(symbol='BTCUSDT', data_type='ufutures')
+df_eth_origin = get_tidyData(symbol='ETHUSDT', data_type='ufutures')
 
 # %%
 
