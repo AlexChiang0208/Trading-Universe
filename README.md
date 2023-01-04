@@ -53,3 +53,10 @@ RSI Strategy in singleTrade_example.py
 4. 配對交易回測 - 等資金下注
 5. 因子強度統計檢定 (未公開)
 
+
+## 備注
+1. resample 使用 (left, left) 為開盤時間 K 棒 ; resample 加一分鐘再使用 (right, right) 為收盤時間 K 棒
+    * 為了與幣安統一使用前者, 之後使用外部資料需小心 forward looking 問題
+2. timestamp 轉 datetime 用 pd.to_datetime() 才不會自動轉換為 UTC+8
+
+
