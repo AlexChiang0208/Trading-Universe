@@ -47,6 +47,7 @@ output_dict = dictType_output(backtesting(data.input_arr, exit_profitOut=True, e
 
 # plot & result
 result = Performance(data.df['Open'], output_dict, data.idx, fund=fund, Name='RSI Strategy')
+result.calculate_result()
 result.show_performance()
 result.draw_unrealized_profit()
 result.draw_realized_profit()
