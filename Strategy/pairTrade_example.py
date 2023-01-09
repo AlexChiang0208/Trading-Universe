@@ -49,6 +49,7 @@ output_dict = dictType_output(backtestingPair(data.input_arr, exit_profitOut=Tru
 
 # plot & result
 result = Performance(data.df_pair['Open'], output_dict, data.idx, fund=fund, Name='Pair Trading')
+result.calculate_result()
 result.show_performance()
 result.draw_realized_profit()
 result.draw_equity_curve(text_position='2022-04-10')
