@@ -196,26 +196,29 @@ class Performance:
 
     def __init__(self, df_price, output_dict, time_index, fund=100, Name='Strategy'):
         self.Name = Name
+        self.output_dict = output_dict
+        self.time_index = time_index
         self.df_price = df_price
-        self.buy = output_dict['buy']
-        self.sell = output_dict['sell']
-        self.trades = len(output_dict['buy']) + len(output_dict['sell'])
-        self.sellshort = output_dict['sellshort']
-        self.buytocover = output_dict['buytocover']
         self.profit_list = output_dict['profit_list']
         self.profit_fee_list = output_dict['profit_fee_list']
-        self.profit_list_realized = output_dict['profit_list_realized']
-        self.profit_fee_list_realized = output_dict['profit_fee_list_realized']
-        self.profit_fee_list_realized_time = output_dict['profit_fee_list_realized_time']
-        self.time_index = time_index
         self.equity = pd.DataFrame({'profit':np.cumsum(self.profit_list), 'profitfee':np.cumsum(self.profit_fee_list)}, index=time_index)
-        self.equity_realized = pd.DataFrame({'profit': np.cumsum(self.profit_list_realized), 'profitfee': np.cumsum(self.profit_fee_list_realized)}, index=df_price.index[self.profit_fee_list_realized_time])
         self.equity['equity'] = self.equity['profitfee'] + fund
         self.return_series = (self.equity['equity'] / self.equity['equity'][0]) * 100
         self.percent_return_series = self.return_series - self.return_series.shift(1)
+        self.buy = output_dict['buy']
+        self.sell = output_dict['sell']
+        self.trades = len(output_dict['buy']) + len(output_dict['sell'])
+
+    def calculate_result(self):
+        self.sellshort = self.output_dict['sellshort']
+        self.buytocover = self.output_dict['buytocover']
+        self.profit_list_realized = self.output_dict['profit_list_realized']
+        self.profit_fee_list_realized = self.output_dict['profit_fee_list_realized']
+        self.profit_fee_list_realized_time = self.output_dict['profit_fee_list_realized_time']
+        self.equity_realized = pd.DataFrame({'profit': np.cumsum(self.profit_list_realized), 'profitfee': np.cumsum(self.profit_fee_list_realized)}, index=self.df_price.index[self.profit_fee_list_realized_time])
         self.equity['drawdown'] = self.equity['equity'] - self.equity['equity'].cummax()
-        self.L_tradePeriod = [output_dict['sell'][num]-output_dict['buy'][num] for num in range(len(output_dict['sell']))]
-        self.S_tradePeriod = [output_dict['buytocover'][num]-output_dict['sellshort'][num] for num in range(len(output_dict['buytocover']))]
+        self.L_tradePeriod = [self.output_dict['sell'][num]-self.output_dict['buy'][num] for num in range(len(self.output_dict['sell']))]
+        self.S_tradePeriod = [self.output_dict['buytocover'][num]-self.output_dict['sellshort'][num] for num in range(len(self.output_dict['buytocover']))]
         self.tradePeriod = self.L_tradePeriod + self.S_tradePeriod
         self.JiaWeiPlot = PercentageReturnPlot(self.percent_return_series)
 
@@ -292,4 +295,5 @@ class Performance:
         print(f'winLossRatio: {winLossRatio}')
 
         return
+
 
