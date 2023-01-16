@@ -62,6 +62,8 @@ def backtesting(input_arr, fund=100, leverage=0, takerFee=0.0004, slippage=0.000
 
         if exit_lossOut == True and lossOut_condition == 4:
             if i < exParam3:
+                profit_list.append(0)
+                profit_fee_list.append(0)
                 continue
 
         # stop time condition
@@ -561,6 +563,8 @@ def backtestingPair(input_arr, fund=100, leverage=0, takerFee=0.0004, slippage=0
 
         if exit_lossOut == True and lossOut_condition == 4:
             if i < exParam3:
+                profit_list.append(0)
+                profit_fee_list.append(0)
                 continue
 
         # stop time condition
