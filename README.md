@@ -16,7 +16,6 @@ Modular backtesting tools (Python)
 
 * Get Data
   * run get_klines.py
-  * run clean_data.py
 * Create your own strategies
   * Create your strategy into "Strategy File"
 
