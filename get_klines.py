@@ -40,7 +40,7 @@ ufutures = [i for i in binance_ufutures if i[-4:] != 'BUSD']
 
 ## prepare date range and file
 
-start_date = "2021-11-1"
+start_date = "2020-11-1"
 end_date = dt.datetime.now().date() + dt.timedelta(days=30)
 
 date_range = pd.date_range(start_date, end_date, freq="M")
