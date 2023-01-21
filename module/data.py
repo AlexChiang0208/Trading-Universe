@@ -31,6 +31,7 @@ def get_tidyData(symbol='BTCUSDT', data_type='ufutures'):
     df_['takerSellVolume'] = df_['Volume'] - df_['takerBuyVolume']
     df_['takerSellQuoteVolume'] = df_['quoteVolume'] - df_['takerBuyQuoteVolume']
     df_['avgTradeVolume'] = df_['quoteVolume'] / df_['numTrade']
+    df_ = df_[~df_.index.duplicated(keep='first')]
 
     return df_
 
@@ -200,4 +201,3 @@ class DataPair:
                                    self.entryLong_arr, self.entrySellShort_arr, 
                                    self.exitShort_arr, self.exitBuyToCover_arr, 
                                    self.vol_arr])
-
