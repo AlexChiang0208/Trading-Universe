@@ -16,6 +16,7 @@ Modular backtesting tools (Python)
 
 * Get Data
   * run get_klines.py
+  * run get_lacked_klines.py
 * Create your own strategies
   * Create your strategy into "Strategy File"
 
@@ -51,6 +52,7 @@ RSI Strategy in singleTrade_example.py
 3. 內建超過 36 種停利停損出場方式
 4. 配對交易回測 - 等資金下注
 5. 因子強度統計檢定 (未公開)
+6. 補充幣安月資料的缺漏天數
 
 
 ## 備注
