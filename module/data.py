@@ -15,7 +15,7 @@ def get_tidyData(symbol='BTCUSDT', data_type='ufutures'):
     ticker_path = sorted(ticker_path)
 
     combine_list = []
-    for path in tqdm(ticker_path):
+    for path in ticker_path:
         temp = pd.read_csv(path, header=None, index_col=None)
         if temp.iloc[0,0] == "open_time":
             temp = temp.iloc[1:]
