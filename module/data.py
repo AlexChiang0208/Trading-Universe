@@ -101,6 +101,7 @@ class Data:
 
     def __init__(self, df_symbol, rule, startTime=None, endTime=None):
         self.df = resample_symbol(df_symbol=df_symbol, rule=rule)
+        self.df = self.df[~self.df['Close'].isnull()] #run re-sample will have missing data
         
         if startTime == None:
             startTime = self.df.index[0]
@@ -151,6 +152,13 @@ class DataPair:
     def __init__(self, df_symbolA, df_symbolB, rule, startTime=None, endTime=None):
 
         self.df_pair, self.dfA, self.dfB = resample_pair(df_symbolA, df_symbolB, rule=rule)
+
+        self.dfA = self.dfA[~self.dfA['Close'].isnull()]
+        self.dfB = self.dfB[~self.dfB['Close'].isnull()]
+        intersection = self.dfA.index.intersection(self.dfB.index)
+        self.dfA = self.dfA.loc[intersection]
+        self.dfB = self.dfB.loc[intersection]
+        self.df_pair = self.df_pair.loc[intersection]
 
         if startTime == None:
             startTime = self.df_pair.index[0]
