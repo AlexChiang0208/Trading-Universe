@@ -15,7 +15,7 @@ Modular backtesting tools (Python)
 ```
 
 * Get Data
-  * run get_klines.py
+  * run get_klines.py (update_period = 'monthly')
   * run get_lacked_klines.py
 * Create your own strategies
   * Create your strategy into "Strategy File"
