@@ -12,14 +12,19 @@ import os
 ## https://data.binance.vision/?prefix=data/spot/monthly/klines/
 
 
-binance_ufutures = pd.read_csv('symbol_list/binance_ufutures_20230117.csv', header=None)[0]
+update_period = 'daily' # daily / monthly (monthly should run get_lacked_klines.py)
+
+# %%
+
+### update ###
+
+binance_ufutures = pd.read_csv('symbol_list/binance_ufutures_20230203.csv', header=None)[0]
 binance_ufutures = list(binance_ufutures)
 binance_ufutures = [i.split('/')[0] for i in binance_ufutures]
 
-binance_spot = pd.read_csv('symbol_list/binance_spot_20230117.csv', header=None)[0]
+binance_spot = pd.read_csv('symbol_list/binance_spot_20230203.csv', header=None)[0]
 binance_spot = list(binance_spot)
 binance_spot = [i.split('/')[0] for i in binance_spot]
-
 
 ## only customize 1000xxxx and save USDT spot
 
@@ -40,11 +45,15 @@ ufutures = [i for i in binance_ufutures if i[-4:] != 'BUSD']
 
 ## prepare date range and file
 
-start_date = "2020-11-1"
-end_date = dt.datetime.now().date() + dt.timedelta(days=30)
+start_date = "2023-1-30"
 
-date_range = pd.date_range(start_date, end_date, freq="M")
-date_range = [str(i.date()).split('-')[0]+'-'+str(i.date()).split('-')[1] for i in date_range]
+if update_period == 'monthly':
+    end_date = dt.datetime.now().date() + dt.timedelta(days=30)
+    date_range = pd.date_range(start_date, end_date, freq="M")
+    date_range = [str(i.date()).split('-')[0]+'-'+str(i.date()).split('-')[1] for i in date_range]
+elif update_period == 'daily':
+    end_date = dt.datetime.now().date() + dt.timedelta(days=2)
+    date_range = pd.date_range(start_date, end_date, freq="D").date
 
 parent_dir = "raw_klines/"
 
@@ -54,9 +63,9 @@ parent_dir = "raw_klines/"
 for dataType, typeName in zip([ufutures, spots], ["ufutures", "spot"]):
 
     if typeName == "ufutures":
-        base_url = "https://data.binance.vision/data/futures/um/monthly/klines"
+        base_url = f"https://data.binance.vision/data/futures/um/{update_period}/klines"
     elif typeName == "spot":
-        base_url = "https://data.binance.vision/data/spot/monthly/klines"
+        base_url = f"https://data.binance.vision/data/spot/{update_period}/klines"
 
     for ticker in dataType:
         print(ticker)
@@ -73,9 +82,10 @@ for dataType, typeName in zip([ufutures, spots], ["ufutures", "spot"]):
             if not os.path.exists(file_path):
                 try:
                     urllib.request.urlretrieve(url, file_path)
+                    # print(f"success : {ticker} {date}")
                 except:
-                    print(f"failed : {ticker} {date}")
+                    # print(f"failed : {ticker} {date}")
                     continue
 
-        time.sleep(2)
+        # time.sleep(1)
 
