@@ -2,6 +2,7 @@ import pandas as pd
 import datetime as dt
 import zipfile
 import urllib.request
+import requests
 import time
 import os
 
@@ -13,18 +14,38 @@ import os
 
 
 update_period = 'daily' # daily / monthly (monthly should run get_lacked_klines.py)
+start_date = "2023-1-30"
+
 
 # %%
 
+# 等 spot symbols > 3000 個，get_symbols_list function 要更新 symbols_list_4
+def get_symbols_list(type_):
+    if type_ == 'ufutures':
+        r = requests.get(f'https://s3-ap-northeast-1.amazonaws.com/data.binance.vision?delimiter=/&prefix=data/futures/um/daily/klines/')
+        return list(map(lambda x:x.split('/')[1],r.text.split('klines')[2:]))
+    elif type_ == 'spot':
+        r = requests.get(f'https://s3-ap-northeast-1.amazonaws.com/data.binance.vision?delimiter=/&prefix=data/spot/daily/klines/')
+        symbols_list_1 = list(map(lambda x:x.split('/')[1],r.text.split('klines')[2:]))
+        r = requests.get('https://s3-ap-northeast-1.amazonaws.com/data.binance.vision?delimiter=/&prefix=data/spot/daily/klines/&marker=data%2Fspot%2Fdaily%2Fklines%2FHOTETH%2F')
+        symbols_list_2 = list(map(lambda x:x.split('/')[1],r.text.split('klines')[2:]))
+        r = requests.get('https://s3-ap-northeast-1.amazonaws.com/data.binance.vision?delimiter=/&prefix=data/spot/daily/klines/&marker=data%2Fspot%2Fdaily%2Fklines%2FWAVESPAX%2F')
+        symbols_list_3 = list(map(lambda x:x.split('/')[1],r.text.split('klines')[2:]))
+        return list(set(symbols_list_1+symbols_list_2+symbols_list_3))
+
+
 ### update ###
 
-binance_ufutures = pd.read_csv('symbol_list/binance_ufutures_20230203.csv', header=None)[0]
-binance_ufutures = list(binance_ufutures)
-binance_ufutures = [i.split('/')[0] for i in binance_ufutures]
+binance_ufutures = get_symbols_list(type_='ufutures')
+binance_spot = get_symbols_list(type_='spot')
 
-binance_spot = pd.read_csv('symbol_list/binance_spot_20230203.csv', header=None)[0]
-binance_spot = list(binance_spot)
-binance_spot = [i.split('/')[0] for i in binance_spot]
+# binance_ufutures = pd.read_csv('symbol_list/binance_ufutures_20230203.csv', header=None)[0]
+# binance_ufutures = list(binance_ufutures)
+# binance_ufutures = [i.split('/')[0] for i in binance_ufutures]
+
+# binance_spot = pd.read_csv('symbol_list/binance_spot_20230203.csv', header=None)[0]
+# binance_spot = list(binance_spot)
+# binance_spot = [i.split('/')[0] for i in binance_spot]
 
 ## only customize 1000xxxx and save USDT spot
 
@@ -42,10 +63,9 @@ for s in binance_ufutures:
 
 ufutures = [i for i in binance_ufutures if i[-4:] != 'BUSD']
 
+# %%
 
 ## prepare date range and file
-
-start_date = "2023-1-30"
 
 if update_period == 'monthly':
     end_date = dt.datetime.now().date() + dt.timedelta(days=30)
