@@ -13,8 +13,8 @@ import os
 ## https://data.binance.vision/?prefix=data/spot/monthly/klines/
 
 
-update_period = 'daily' # daily / monthly (monthly should run get_lacked_klines.py)
-start_date = "2023-1-30"
+update_period = 'monthly' # daily / monthly (monthly should run get_lacked_klines.py)
+start_date = "2020-4-1"
 
 
 # %%
@@ -32,7 +32,6 @@ def get_symbols_list(type_):
         r = requests.get('https://s3-ap-northeast-1.amazonaws.com/data.binance.vision?delimiter=/&prefix=data/spot/daily/klines/&marker=data%2Fspot%2Fdaily%2Fklines%2FWAVESPAX%2F')
         symbols_list_3 = list(map(lambda x:x.split('/')[1],r.text.split('klines')[2:]))
         return list(set(symbols_list_1+symbols_list_2+symbols_list_3))
-
 
 ### update ###
 
@@ -57,7 +56,7 @@ for s in binance_ufutures:
             symbol = s[4:]
         else:
             symbol = s
-
+            
         if symbol in binance_spot:
             spots.append(symbol)
 
@@ -108,4 +107,3 @@ for dataType, typeName in zip([ufutures, spots], ["ufutures", "spot"]):
                     continue
 
         # time.sleep(1)
-
