@@ -1,9 +1,10 @@
 from numba import jit
 
 @jit(nopython=True)
-def backtesting(input_arr, fund=100, leverage=0, takerFee=0.0004, slippage=0.0001,
+def backtesting(input_arr, fund=100, leverage=0, takerFee=0.0004, 
+                slippage=0.0001, stopLoss_slippageAdd=0.001,
                 exit_timeOut=False, exParam1=20, from_exit_condition=False,
-                exit_profitOut=False, exParam2=0.02, 
+                exit_profitOut=False, exParam2=0.02,
                 exit_lossOut=False, lossOut_condition=1, exParam3=0.05, 
                 price_trigger3='C', risk_control=False, rc_percent=0.5,
                 exit_condition=1, exParam0=0, price_trigger0='C'
@@ -36,9 +37,10 @@ def backtesting(input_arr, fund=100, leverage=0, takerFee=0.0004, slippage=0.000
     profit_fee_list_realized = [0]
     profit_fee_list_realized_time = [0]
 
-    feeRate = takerFee + slippage
     fund_money = fund
-
+    feeRate = takerFee + slippage
+    stopLoss_feeRate = takerFee + slippage + stopLoss_slippageAdd
+    
     endPointHigh_C = close_arr[0]
     endPointHigh_H = close_arr[0]
     endPointLow_C = close_arr[0]
@@ -83,8 +85,12 @@ def backtesting(input_arr, fund=100, leverage=0, takerFee=0.0004, slippage=0.000
             if exitSwitch == True:
                 if LS == 'L':
                     stopProfit = high_arr[i] >= open_arr[exT] * (1+exParam2)
+                    if stopProfit:
+                        exitPrice = open_arr[exT] * (1+exParam2)
                 elif LS == 'S':
                     stopProfit = low_arr[i] <= open_arr[exT] * (1-exParam2)
+                    if stopProfit:
+                        exitPrice = open_arr[exT] * (1-exParam2)
                 else:
                     stopProfit = False
 
@@ -95,8 +101,12 @@ def backtesting(input_arr, fund=100, leverage=0, takerFee=0.0004, slippage=0.000
                 if lossOut_condition == 1:
                     if LS == 'L':
                         stopLoss = low_arr[i] <= open_arr[exT] * (1-exParam3)
+                        if stopLoss:
+                            exitPrice = open_arr[exT] * (1-exParam3)
                     elif LS == 'S':
                         stopLoss = high_arr[i] >= open_arr[exT] * (1+exParam3)
+                        if stopLoss:
+                            exitPrice = open_arr[exT] * (1+exParam3)
                     else:
                         stopLoss = False
 
@@ -104,13 +114,21 @@ def backtesting(input_arr, fund=100, leverage=0, takerFee=0.0004, slippage=0.000
                     if LS == 'L':
                         if price_trigger3 == 'C':
                             stopLoss = low_arr[i] <= endPointHigh_C * (1-exParam3)
+                            if stopLoss:
+                                exitPrice = endPointHigh_C * (1-exParam3)
                         elif price_trigger3 == 'HL':
                             stopLoss = low_arr[i] <= endPointHigh_H * (1-exParam3)
+                            if stopLoss:
+                                exitPrice = endPointHigh_H * (1-exParam3)
                     elif LS == 'S':
                         if price_trigger3 == 'C':
                             stopLoss = high_arr[i] >= endPointLow_C * (1+exParam3)
+                            if stopLoss:
+                                exitPrice = endPointLow_C * (1+exParam3)
                         elif price_trigger3 == 'HL':
                             stopLoss = high_arr[i] >= endPointLow_L * (1+exParam3)
+                            if stopLoss:
+                                exitPrice = endPointLow_L * (1+exParam3)
                     else:
                         stopLoss = False
 
@@ -118,13 +136,21 @@ def backtesting(input_arr, fund=100, leverage=0, takerFee=0.0004, slippage=0.000
                     if LS == 'L':
                         if price_trigger3 == 'C':
                             stopLoss = low_arr[i] <= endPointHigh_C - exParam3*vol_arr[exT-1]
+                            if stopLoss:
+                                exitPrice = endPointHigh_C - exParam3*vol_arr[exT-1]
                         elif price_trigger3 == 'HL':
                             stopLoss = low_arr[i] <= endPointHigh_H - exParam3*vol_arr[exT-1]
+                            if stopLoss:
+                                exitPrice = endPointHigh_H - exParam3*vol_arr[exT-1]
                     elif LS == 'S':
                         if price_trigger3 == 'C':
                             stopLoss = high_arr[i] >= endPointLow_C + exParam3*vol_arr[exT-1]
+                            if stopLoss:
+                                exitPrice = endPointLow_C + exParam3*vol_arr[exT-1]
                         elif price_trigger3 == 'HL':
                             stopLoss = high_arr[i] >= endPointLow_L + exParam3*vol_arr[exT-1]
+                            if stopLoss:
+                                exitPrice = endPointLow_L + exParam3*vol_arr[exT-1]
                     else:
                         stopLoss = False
 
@@ -132,13 +158,21 @@ def backtesting(input_arr, fund=100, leverage=0, takerFee=0.0004, slippage=0.000
                     if LS == 'L':
                         if price_trigger3 == 'C':
                             stopLoss = low_arr[i] <= min(close_arr[i-exParam3:i])
+                            if stopLoss:
+                                exitPrice = min(close_arr[i-exParam3:i])
                         elif price_trigger3 == 'HL':
                             stopLoss = low_arr[i] <= min(low_arr[i-exParam3:i])
+                            if stopLoss:
+                                exitPrice = min(low_arr[i-exParam3:i])
                     elif LS == 'S':
                         if price_trigger3 == 'C':
                             stopLoss = high_arr[i] >= max(close_arr[i-exParam3:i])
+                            if stopLoss:
+                                exitPrice = max(close_arr[i-exParam3:i])
                         elif price_trigger3 == 'HL':
                             stopLoss = high_arr[i] >= max(high_arr[i-exParam3:i])
+                            if stopLoss:
+                                exitPrice = max(high_arr[i-exParam3:i])
                     else:
                         stopLoss = False
 
@@ -276,7 +310,10 @@ def backtesting(input_arr, fund=100, leverage=0, takerFee=0.0004, slippage=0.000
 
         # long position
         elif LS == 'L':
-            profit = orderSize * (open_arr[i+1] - open_arr[i])
+            if stopLoss or stopProfit:
+                profit = orderSize * (exitPrice - open_arr[i])
+            else:
+                profit = orderSize * (open_arr[i+1] - open_arr[i])
             profit_list.append(profit)
             ts += 1
 
@@ -291,15 +328,26 @@ def backtesting(input_arr, fund=100, leverage=0, takerFee=0.0004, slippage=0.000
                 if low_arr[i] < endPointLow_L:
                     endPointLow_L = low_arr[i]
 
-            if exitShort_arr[i] == True or i == len(open_arr)-2 or stopLoss or stopProfit or stopTime:    
-                pl_round = orderSize * (open_arr[i+1] - open_arr[t])
-                profit_fee = profit - orderMoney*feeRate - (orderMoney+pl_round)*feeRate
+            if exitShort_arr[i] == True or i == len(open_arr)-2 or stopLoss or stopProfit or stopTime: 
+                if stopLoss or stopProfit:
+                    pl_round = orderSize * (exitPrice - open_arr[t])
+                    if stopLoss:
+                        profit_fee = profit - orderMoney*feeRate - (orderMoney+pl_round)*stopLoss_feeRate
+                    else:
+                        profit_fee = profit - orderMoney*feeRate - (orderMoney+pl_round)*feeRate
+                else:
+                    pl_round = orderSize * (open_arr[i+1] - open_arr[t])
+                    profit_fee = profit - orderMoney*feeRate - (orderMoney+pl_round)*feeRate
+                
                 profit_fee_list.append(profit_fee)
                 sell.append(i+1)
                 
                 # Realized PnL
                 profit_realized = pl_round
-                profit_fee_realized = pl_round - orderMoney*feeRate - (orderMoney+pl_round)*feeRate
+                if stopLoss:
+                    profit_fee_realized = pl_round - orderMoney*feeRate - (orderMoney+pl_round)*stopLoss_feeRate
+                else:
+                    profit_fee_realized = pl_round - orderMoney*feeRate - (orderMoney+pl_round)*feeRate
                 fund += profit_fee_realized
 
                 profit_list_realized.append(profit_realized)
@@ -355,7 +403,10 @@ def backtesting(input_arr, fund=100, leverage=0, takerFee=0.0004, slippage=0.000
 
         # short position
         elif LS == 'S':
-            profit = orderSize * (open_arr[i] - open_arr[i+1])
+            if stopLoss or stopProfit:
+                profit = orderSize * (open_arr[i] - exitPrice)
+            else:
+                profit = orderSize * (open_arr[i] - open_arr[i+1])
             profit_list.append(profit)
             ts += 1
 
@@ -371,14 +422,25 @@ def backtesting(input_arr, fund=100, leverage=0, takerFee=0.0004, slippage=0.000
                     endPointLow_L = low_arr[i]
 
             if exitBuyToCover_arr[i] == True or i == len(open_arr)-2 or stopLoss or stopProfit or stopTime: 
-                pl_round = orderSize * (open_arr[t] - open_arr[i+1])
-                profit_fee = profit - orderMoney*feeRate - (orderMoney+pl_round)*feeRate
+                if stopLoss or stopProfit:
+                    pl_round = orderSize * (open_arr[t] - exitPrice)
+                    if stopLoss:
+                        profit_fee = profit - orderMoney*feeRate - (orderMoney+pl_round)*stopLoss_feeRate
+                    else:
+                        profit_fee = profit - orderMoney*feeRate - (orderMoney+pl_round)*feeRate
+                else:
+                    pl_round = orderSize * (open_arr[t] - open_arr[i+1])
+                    profit_fee = profit - orderMoney*feeRate - (orderMoney+pl_round)*feeRate
+                
                 profit_fee_list.append(profit_fee)
                 buytocover.append(i+1)
                 
                 # Realized PnL
                 profit_realized = pl_round
-                profit_fee_realized = pl_round - orderMoney*feeRate - (orderMoney+pl_round)*feeRate
+                if stopLoss:
+                    profit_fee_realized = pl_round - orderMoney*feeRate - (orderMoney+pl_round)*stopLoss_feeRate
+                else:
+                    profit_fee_realized = pl_round - orderMoney*feeRate - (orderMoney+pl_round)*feeRate
                 fund += profit_fee_realized
 
                 profit_list_realized.append(profit_realized)
@@ -436,7 +498,8 @@ def backtesting(input_arr, fund=100, leverage=0, takerFee=0.0004, slippage=0.000
 
 
 @jit(nopython=True)
-def backtestingPair(input_arr, fund=100, leverage=0, takerFee=0.0004, slippage=0.0001,
+def backtestingPair(input_arr, fund=100, leverage=0, takerFee=0.0004, 
+                    slippage=0.0001, stopLoss_slippageAdd=0.001,
                     exit_timeOut=False, exParam1=20, from_exit_condition=False,
                     exit_profitOut=False, exParam2=0.02,
                     exit_lossOut=False, lossOut_condition=1, exParam3=0.05, risk_control=False, rc_percent=0.5,
@@ -472,9 +535,10 @@ def backtestingPair(input_arr, fund=100, leverage=0, takerFee=0.0004, slippage=0
     profit_fee_list_realized = [0]
     profit_fee_list_realized_time = [0]
 
-    feeRate = takerFee + slippage
     fund_money = fund
-
+    feeRate = takerFee + slippage
+    stopLoss_feeRate = takerFee + slippage + stopLoss_slippageAdd
+    
     endPointHigh = spread_arr[0]
     endPointHigh_A = closeA_arr[0]
     endPointHigh_B = closeB_arr[0]
@@ -841,5 +905,3 @@ def dictType_output(output_tuple):
                    'profit_fee_list_realized': output_tuple[7], 'profit_fee_list_realized_time': output_tuple[8]}
     
     return output_dict
-
-
