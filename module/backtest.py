@@ -1,14 +1,12 @@
-import numpy as np
 from numba import jit
-
 
 @jit(nopython=True)
 def backtesting(input_arr, fund=100, leverage=0, takerFee=0.0004, slippage=0.0001,
                 exit_timeOut=False, exParam1=20, from_exit_condition=False,
-                exit_profitOut=False, exParam2=0.02, end_trigger2='C',
-                exit_lossOut=False, lossOut_condition=1, exParam3=0.05, start_trigger3='C', 
-                end_trigger3='C', risk_control=False, rc_percent=0.5,
-                exit_condition=1, exParam0=0, end_trigger0='C'
+                exit_profitOut=False, exParam2=0.02, 
+                exit_lossOut=False, lossOut_condition=1, exParam3=0.05, 
+                price_trigger3='C', risk_control=False, rc_percent=0.5,
+                exit_condition=1, exParam0=0, price_trigger0='C'
                 ):
 
     '''
@@ -83,129 +81,66 @@ def backtesting(input_arr, fund=100, leverage=0, takerFee=0.0004, slippage=0.000
         # stop profit condition
         if exit_profitOut == True:
             if exitSwitch == True:
-                if end_trigger2 == 'C':
-                    if LS == 'L':
-                        stopProfit = close_arr[i] >= open_arr[exT] * (1+exParam2)
-                    elif LS == 'S':
-                        stopProfit = close_arr[i] <= open_arr[exT] * (1-exParam2)
-                    else:
-                        stopProfit = False
-
-                elif end_trigger2 == 'HL':
-                    if LS == 'L':
-                        stopProfit = high_arr[i] >= open_arr[exT] * (1+exParam2)
-                    elif LS == 'S':
-                        stopProfit = low_arr[i] <= open_arr[exT] * (1-exParam2)
-                    else:
-                        stopProfit = False
+                if LS == 'L':
+                    stopProfit = high_arr[i] >= open_arr[exT] * (1+exParam2)
+                elif LS == 'S':
+                    stopProfit = low_arr[i] <= open_arr[exT] * (1-exParam2)
+                else:
+                    stopProfit = False
 
         # stop loss condition
         if exit_lossOut == True:
             if exitSwitch == True:
 
                 if lossOut_condition == 1:
-                    if end_trigger3 == 'C':
-                        if LS == 'L':
-                            stopLoss = close_arr[i] <= open_arr[exT] * (1-exParam3)
-                        elif LS == 'S':
-                            stopLoss = close_arr[i] >= open_arr[exT] * (1+exParam3)
-                        else:
-                            stopLoss = False
-
-                    elif end_trigger3 == 'HL':
-                        if LS == 'L':
-                            stopLoss = low_arr[i] <= open_arr[exT] * (1-exParam3)
-                        elif LS == 'S':
-                            stopLoss = high_arr[i] >= open_arr[exT] * (1+exParam3)
-                        else:
-                            stopLoss = False
+                    if LS == 'L':
+                        stopLoss = low_arr[i] <= open_arr[exT] * (1-exParam3)
+                    elif LS == 'S':
+                        stopLoss = high_arr[i] >= open_arr[exT] * (1+exParam3)
+                    else:
+                        stopLoss = False
 
                 elif lossOut_condition == 2:
-                    if end_trigger3 == 'C':
-                        if LS == 'L':
-                            if start_trigger3 == 'C':
-                                stopLoss = close_arr[i] <= endPointHigh_C * (1-exParam3)
-                            elif start_trigger3 == 'HL':
-                                stopLoss = close_arr[i] <= endPointHigh_H * (1-exParam3)
-                        elif LS == 'S':
-                            if start_trigger3 == 'C':
-                                stopLoss = close_arr[i] >= endPointLow_C * (1+exParam3)
-                            elif start_trigger3 == 'HL':
-                                stopLoss = close_arr[i] >= endPointLow_L * (1+exParam3)
-                        else:
-                            stopLoss = False
-
-                    elif end_trigger3 == 'HL':
-                        if LS == 'L':
-                            if start_trigger3 == 'C':
-                                stopLoss = low_arr[i] <= endPointHigh_C * (1-exParam3)
-                            elif start_trigger3 == 'HL':
-                                stopLoss = low_arr[i] <= endPointHigh_H * (1-exParam3)
-                        elif LS == 'S':
-                            if start_trigger3 == 'C':
-                                stopLoss = high_arr[i] >= endPointLow_C * (1+exParam3)
-                            elif start_trigger3 == 'HL':
-                                stopLoss = high_arr[i] >= endPointLow_L * (1+exParam3)
-                        else:
-                            stopLoss = False
+                    if LS == 'L':
+                        if price_trigger3 == 'C':
+                            stopLoss = low_arr[i] <= endPointHigh_C * (1-exParam3)
+                        elif price_trigger3 == 'HL':
+                            stopLoss = low_arr[i] <= endPointHigh_H * (1-exParam3)
+                    elif LS == 'S':
+                        if price_trigger3 == 'C':
+                            stopLoss = high_arr[i] >= endPointLow_C * (1+exParam3)
+                        elif price_trigger3 == 'HL':
+                            stopLoss = high_arr[i] >= endPointLow_L * (1+exParam3)
+                    else:
+                        stopLoss = False
 
                 elif lossOut_condition == 3:
-                    if end_trigger3 == 'C':
-                        if LS == 'L':
-                            if start_trigger3 == 'C':
-                                stopLoss = close_arr[i] <= endPointHigh_C - exParam3*vol_arr[exT-1]
-                            elif start_trigger3 == 'HL':
-                                stopLoss = close_arr[i] <= endPointHigh_H - exParam3*vol_arr[exT-1]
-                        elif LS == 'S':
-                            if start_trigger3 == 'C':
-                                stopLoss = close_arr[i] >= endPointLow_C + exParam3*vol_arr[exT-1]
-                            elif start_trigger3 == 'HL':
-                                stopLoss = close_arr[i] >= endPointLow_L + exParam3*vol_arr[exT-1]
-                        else:
-                            stopLoss = False
-
-                    elif end_trigger3 == 'HL':
-                        if LS == 'L':
-                            if start_trigger3 == 'C':
-                                stopLoss = low_arr[i] <= endPointHigh_C - exParam3*vol_arr[exT-1]
-                            elif start_trigger3 == 'HL':
-                                stopLoss = low_arr[i] <= endPointHigh_H - exParam3*vol_arr[exT-1]
-                        elif LS == 'S':
-                            if start_trigger3 == 'C':
-                                stopLoss = high_arr[i] >= endPointLow_C + exParam3*vol_arr[exT-1]
-                            elif start_trigger3 == 'HL':
-                                stopLoss = high_arr[i] >= endPointLow_L + exParam3*vol_arr[exT-1]
-                        else:
-                            stopLoss = False
+                    if LS == 'L':
+                        if price_trigger3 == 'C':
+                            stopLoss = low_arr[i] <= endPointHigh_C - exParam3*vol_arr[exT-1]
+                        elif price_trigger3 == 'HL':
+                            stopLoss = low_arr[i] <= endPointHigh_H - exParam3*vol_arr[exT-1]
+                    elif LS == 'S':
+                        if price_trigger3 == 'C':
+                            stopLoss = high_arr[i] >= endPointLow_C + exParam3*vol_arr[exT-1]
+                        elif price_trigger3 == 'HL':
+                            stopLoss = high_arr[i] >= endPointLow_L + exParam3*vol_arr[exT-1]
+                    else:
+                        stopLoss = False
 
                 elif lossOut_condition == 4:
-                    if end_trigger3 == 'C':
-                        if LS == 'L':
-                            if start_trigger3 == 'C':
-                                stopLoss = close_arr[i] <= min(close_arr[i-exParam3:i])
-                            elif start_trigger3 == 'HL':
-                                stopLoss = close_arr[i] <= min(low_arr[i-exParam3:i])
-                        elif LS == 'S':
-                            if start_trigger3 == 'C':
-                                stopLoss = close_arr[i] >= max(close_arr[i-exParam3:i])
-                            elif start_trigger3 == 'HL':
-                                stopLoss = close_arr[i] >= max(high_arr[i-exParam3:i])
-                        else:
-                            stopLoss = False
-
-                    elif end_trigger3 == 'HL':
-                        if LS == 'L':
-                            if start_trigger3 == 'C':
-                                stopLoss = low_arr[i] <= min(close_arr[i-exParam3:i])
-                            elif start_trigger3 == 'HL':
-                                stopLoss = low_arr[i] <= min(low_arr[i-exParam3:i])
-                        elif LS == 'S':
-                            if start_trigger3 == 'C':
-                                stopLoss = high_arr[i] >= max(close_arr[i-exParam3:i])
-                            elif start_trigger3 == 'HL':
-                                stopLoss = high_arr[i] >= max(high_arr[i-exParam3:i])
-                        else:
-                            stopLoss = False
+                    if LS == 'L':
+                        if price_trigger3 == 'C':
+                            stopLoss = low_arr[i] <= min(close_arr[i-exParam3:i])
+                        elif price_trigger3 == 'HL':
+                            stopLoss = low_arr[i] <= min(low_arr[i-exParam3:i])
+                    elif LS == 'S':
+                        if price_trigger3 == 'C':
+                            stopLoss = high_arr[i] >= max(close_arr[i-exParam3:i])
+                        elif price_trigger3 == 'HL':
+                            stopLoss = high_arr[i] >= max(high_arr[i-exParam3:i])
+                    else:
+                        stopLoss = False
 
                 ## when touch stopLoss, control risk after next trade
                 if LS != '' and risk_control == True and stopLoss == True:
@@ -219,14 +154,14 @@ def backtesting(input_arr, fund=100, leverage=0, takerFee=0.0004, slippage=0.000
                     exitSwitch = True
 
             elif exit_condition == 2:
-                if end_trigger0 == 'C':
+                if price_trigger0 == 'C':
                     if LS == 'L':
                         if close_arr[i] >= open_arr[t] * (1+exParam0):
                             exitSwitch = True
                     elif LS == 'S':
                         if close_arr[i] <= open_arr[t] * (1-exParam0):
                             exitSwitch = True
-                elif end_trigger0 == 'HL':
+                elif price_trigger0 == 'HL':
                     if LS == 'L':
                         if high_arr[i] >= open_arr[t] * (1+exParam0):
                             exitSwitch = True
@@ -235,14 +170,14 @@ def backtesting(input_arr, fund=100, leverage=0, takerFee=0.0004, slippage=0.000
                             exitSwitch = True
         
             elif exit_condition == 3:
-                if end_trigger0 == 'C':
+                if price_trigger0 == 'C':
                     if LS == 'L':
                         if close_arr[i] >= open_arr[t] + exParam0*vol_arr[t-1]:
                             exitSwitch = True
                     elif LS == 'S':
                         if close_arr[i] <= open_arr[t] - exParam0*vol_arr[t-1]:
                             exitSwitch = True
-                elif end_trigger0 == 'HL':
+                elif price_trigger0 == 'HL':
                     if LS == 'L':
                         if high_arr[i] >= open_arr[t] + exParam0*vol_arr[t-1]:
                             exitSwitch = True
@@ -251,14 +186,14 @@ def backtesting(input_arr, fund=100, leverage=0, takerFee=0.0004, slippage=0.000
                             exitSwitch = True
             
             elif exit_condition == 4:
-                if end_trigger0 == 'C':
+                if price_trigger0 == 'C':
                     if LS == 'L':
                         if close_arr[i] <= open_arr[t] * (1-exParam0):
                             exitSwitch = True
                     elif LS == 'S':
                         if close_arr[i] >= open_arr[t] * (1+exParam0):
                             exitSwitch = True
-                elif end_trigger0 == 'HL':
+                elif price_trigger0 == 'HL':
                     if LS == 'L':
                         if low_arr[i] <= open_arr[t] * (1-exParam0):
                             exitSwitch = True
@@ -267,14 +202,14 @@ def backtesting(input_arr, fund=100, leverage=0, takerFee=0.0004, slippage=0.000
                             exitSwitch = True
 
             elif exit_condition == 5:
-                if end_trigger0 == 'C':
+                if price_trigger0 == 'C':
                     if LS == 'L':
                         if close_arr[i] <= open_arr[t] - exParam0*vol_arr[t-1]:
                             exitSwitch = True
                     elif LS == 'S':
                         if close_arr[i] >= open_arr[t] + exParam0*vol_arr[t-1]:
                             exitSwitch = True
-                elif end_trigger0 == 'HL':
+                elif price_trigger0 == 'HL':
                     if LS == 'L':
                         if low_arr[i] <= open_arr[t] - exParam0*vol_arr[t-1]:
                             exitSwitch = True
@@ -906,6 +841,5 @@ def dictType_output(output_tuple):
                    'profit_fee_list_realized': output_tuple[7], 'profit_fee_list_realized_time': output_tuple[8]}
     
     return output_dict
-
 
 
