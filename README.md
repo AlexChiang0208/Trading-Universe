@@ -61,5 +61,3 @@ RSI Strategy in singleTrade_example.py
 3. 回測限制 : 如果同一根 K 棒同時碰到停損及停利, 視為停損
 4. 盤中停損另加滑價 (stopLoss_slippageAdd)
 
-#### result.draw_equity_curve(text_position='2022-01-01')停髓
-#### result.draw_equity_curve(text_position='2022-01-01')
