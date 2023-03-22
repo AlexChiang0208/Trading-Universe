@@ -59,3 +59,7 @@ RSI Strategy in singleTrade_example.py
     * 為了與幣安統一使用前者, 之後使用外部資料需小心 forward looking 問題
 2. timestamp 轉 datetime 用 pd.to_datetime() 才不會自動轉換為 UTC+8
 3. 回測限制 : 如果同一根 K 棒同時碰到停損及停利, 視為停損
+4. 盤中停損另加滑價 (stopLoss_slippageAdd)
+
+#### result.draw_equity_curve(text_position='2022-01-01')停髓
+#### result.draw_equity_curve(text_position='2022-01-01')
