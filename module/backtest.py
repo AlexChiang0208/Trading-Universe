@@ -6,8 +6,8 @@ def backtesting(input_arr, fund=100, leverage=0, takerFee=0.0004,
                 exit_timeOut=False, exParam1=20, from_exit_condition=False,
                 exit_profitOut=False, exParam2=0.02,
                 exit_lossOut=False, lossOut_condition=1, exParam3=0.05, 
-                price_trigger3='C', risk_control=False, rc_percent=0.5,
-                exit_condition=1, exParam0=0, price_trigger0='C'
+                price_trigger3='HL', risk_control=False, rc_percent=0.5,
+                exit_condition=1, exParam0=0, price_trigger0='HL'
                 ):
 
     '''
