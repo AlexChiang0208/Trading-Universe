@@ -60,4 +60,5 @@ RSI Strategy in singleTrade_example.py
 2. timestamp 轉 datetime 用 pd.to_datetime() 才不會自動轉換為 UTC+8
 3. 回測限制 : 如果同一根 K 棒同時碰到停損及停利, 視為停損
 4. 盤中停損另加滑價 (stopLoss_slippageAdd)
+5. 對外使用請註明出處 (**Please indicate the source for external use.**)
 
