@@ -45,7 +45,9 @@ exitShort = data.df_pair['rsi_r1'] < 30
 exitBuyToCover = data.df_pair['rsi_r1'] > 70
 
 data.type_setting(entryLong, entrySellShort, exitShort, exitBuyToCover)
-output_dict = dictType_output(backtestingPair(data.input_arr, exit_profitOut=True, exParam2=0.03, fund=fund))
+output_dict = dictType_output(backtestingPair(data.input_arr, exit_profitOut=True, exParam2=0.03, exit_lossOut=True, exParam3=0.02, fund=fund, stopLoss_slippageAdd=0.002))
+
+# %%
 
 # plot & result
 result = Performance(data.df_pair['Open'], output_dict, data.idx, fund=fund, Name='Pair Trading')
@@ -53,6 +55,3 @@ result.calculate_result()
 result.show_performance()
 result.draw_realized_profit()
 result.draw_equity_curve(text_position='2022-04-10')
-
-
-# %%
