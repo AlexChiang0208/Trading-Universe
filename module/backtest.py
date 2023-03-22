@@ -555,6 +555,11 @@ def backtestingPair(input_arr, fund=100, leverage=0, takerFee=0.0004,
     t = 0
     exT = 0
 
+    if exit_lossOut == True and (lossOut_condition == 1 or lossOut_condition == 2):
+        lossOut_specialCase = True
+    else:
+        lossOut_specialCase = False
+
     for i in range(len(openA_arr)):
 
         if i == len(openA_arr)-1:
@@ -585,8 +590,14 @@ def backtestingPair(input_arr, fund=100, leverage=0, takerFee=0.0004,
             if exitSwitch == True:
                 if LS == 'L':
                     stopProfit = (((closeA_arr[i] / openA_arr[exT] - 1) + (1 - closeB_arr[i] / openB_arr[exT])) / 2) >= exParam2
+                    if stopProfit:
+                        exitPriceA = closeA_arr[i]
+                        exitPriceB = openB_arr[exT] * (closeA_arr[i] / openA_arr[exT] - 2*exParam2)
                 elif LS == 'S':
                     stopProfit = (((1 - closeA_arr[i] / openA_arr[exT]) + (closeB_arr[i] / openB_arr[exT] - 1)) / 2) >= exParam2
+                    if stopProfit:
+                        exitPriceA = closeA_arr[i]
+                        exitPriceB = openB_arr[exT] * (2*exParam2 + closeA_arr[i] / openA_arr[exT])
                 else:
                     stopProfit = False
 
@@ -597,16 +608,28 @@ def backtestingPair(input_arr, fund=100, leverage=0, takerFee=0.0004,
                 if lossOut_condition == 1:
                     if LS == 'L':
                         stopLoss = (((closeA_arr[i] / openA_arr[exT] - 1) + (1 - closeB_arr[i] / openB_arr[exT])) / 2) <= -exParam3
+                        if stopLoss:
+                            exitPriceA = closeA_arr[i]
+                            exitPriceB = openB_arr[exT] * (closeA_arr[i] / openA_arr[exT] + 2*exParam3)
                     elif LS == 'S':
                         stopLoss = (((1 - closeA_arr[i] / openA_arr[exT]) + (closeB_arr[i] / openB_arr[exT] - 1)) / 2) <= -exParam3
+                        if stopLoss:
+                            exitPriceA = closeA_arr[i]
+                            exitPriceB = openB_arr[exT] * (closeA_arr[i] / openA_arr[exT] - 2*exParam3)
                     else:
                         stopLoss = False
 
                 elif lossOut_condition == 2:
                     if LS == 'L':
-                        stopLoss = (((closeA_arr[i] / endPointHigh_A - 1) + (1 - closeB_arr[i] / endPointHigh_B)) / 2) <= -exParam3    
+                        stopLoss = (((closeA_arr[i] / endPointHigh_A - 1) + (1 - closeB_arr[i] / endPointHigh_B)) / 2) <= -exParam3   
+                        if stopLoss:
+                            exitPriceA = closeA_arr[i]
+                            exitPriceB = endPointHigh_B * (closeA_arr[i] / endPointHigh_A + 2*exParam3)
                     elif LS == 'S':
                         stopLoss = (((1 - closeA_arr[i] / endPointLow_A) + (closeB_arr[i] / endPointLow_B - 1)) / 2) <= -exParam3
+                        if stopLoss:
+                            exitPriceA = closeA_arr[i]
+                            exitPriceB = endPointLow_B * (closeA_arr[i] / endPointLow_A - 2*exParam3)
                     else:
                         stopLoss = False
 
@@ -733,7 +756,10 @@ def backtestingPair(input_arr, fund=100, leverage=0, takerFee=0.0004,
 
         # long position
         elif LS == 'L':
-            profit = orderSizeA * (openA_arr[i+1] - openA_arr[i]) + orderSizeB * (openB_arr[i] - openB_arr[i+1])
+            if (stopProfit==False and stopLoss==False) or (stopLoss==True and lossOut_specialCase==False):
+                profit = orderSizeA * (openA_arr[i+1] - openA_arr[i]) + orderSizeB * (openB_arr[i] - openB_arr[i+1])
+            else:
+                profit = orderSizeA * (exitPriceA - openA_arr[i]) + orderSizeB * (openB_arr[i] - exitPriceB)
             profit_list.append(profit)
             ts += 1
 
@@ -749,14 +775,25 @@ def backtestingPair(input_arr, fund=100, leverage=0, takerFee=0.0004,
                     endPointLow_B = closeB_arr[i]
 
             if exitShort_arr[i] == True or i == len(openA_arr)-2 or stopLoss or stopProfit or stopTime: 
-                pl_round = orderSizeA * (openA_arr[i+1] - openA_arr[t]) + orderSizeB * (openB_arr[t] - openB_arr[i+1])
-                profit_fee = profit - orderMoney*feeRate - (orderMoney+pl_round)*feeRate
+                if (stopProfit==False and stopLoss==False) or (stopLoss==True and lossOut_specialCase==False):
+                    pl_round = orderSizeA * (openA_arr[i+1] - openA_arr[t]) + orderSizeB * (openB_arr[t] - openB_arr[i+1])
+                    profit_fee = profit - orderMoney*feeRate - (orderMoney+pl_round)*feeRate
+                else:
+                    pl_round = orderSizeA * (exitPriceA - openA_arr[t]) + orderSizeB * (openB_arr[t] - exitPriceB)
+                    if stopLoss and lossOut_specialCase:
+                        profit_fee = profit - orderMoney*feeRate - (orderMoney+pl_round)*stopLoss_feeRate
+                    else:
+                        profit_fee = profit - orderMoney*feeRate - (orderMoney+pl_round)*feeRate
+                
                 profit_fee_list.append(profit_fee)
                 sell.append(i+1)
                 
                 # Realized PnL
                 profit_realized = pl_round
-                profit_fee_realized = pl_round - orderMoney*feeRate - (orderMoney+pl_round)*feeRate
+                if stopLoss and lossOut_specialCase:
+                    profit_fee_realized = pl_round - orderMoney*feeRate - (orderMoney+pl_round)*stopLoss_feeRate
+                else:
+                    profit_fee_realized = pl_round - orderMoney*feeRate - (orderMoney+pl_round)*feeRate
                 fund += profit_fee_realized
 
                 profit_list_realized.append(profit_realized)
@@ -815,7 +852,10 @@ def backtestingPair(input_arr, fund=100, leverage=0, takerFee=0.0004,
 
         # short position
         elif LS == 'S':
-            profit = orderSizeA * (openA_arr[i] - openA_arr[i+1]) + orderSizeB * (openB_arr[i+1] - openB_arr[i])
+            if (stopProfit==False and stopLoss==False) or (stopLoss==True and lossOut_specialCase==False):
+                profit = orderSizeA * (openA_arr[i] - openA_arr[i+1]) + orderSizeB * (openB_arr[i+1] - openB_arr[i])
+            else:
+                profit = orderSizeA * (openA_arr[i] - exitPriceA) + orderSizeB * (exitPriceB - openB_arr[i])
             profit_list.append(profit)
             ts += 1
 
@@ -831,14 +871,25 @@ def backtestingPair(input_arr, fund=100, leverage=0, takerFee=0.0004,
                     endPointLow_B = closeB_arr[i]
 
             if exitBuyToCover_arr[i] == True or i == len(openA_arr)-2 or stopLoss or stopProfit or stopTime: 
-                pl_round = orderSizeA * (openA_arr[t] - openA_arr[i+1]) + orderSizeB * (openB_arr[i+1] - openB_arr[t])
-                profit_fee = profit - orderMoney*feeRate - (orderMoney+pl_round)*feeRate
+                if (stopProfit==False and stopLoss==False) or (stopLoss==True and lossOut_specialCase==False):
+                    pl_round = orderSizeA * (openA_arr[t] - openA_arr[i+1]) + orderSizeB * (openB_arr[i+1] - openB_arr[t])
+                    profit_fee = profit - orderMoney*feeRate - (orderMoney+pl_round)*feeRate
+                else:
+                    pl_round = orderSizeA * (openA_arr[t] - exitPriceA) + orderSizeB * (exitPriceB - openB_arr[t])
+                    if stopLoss and lossOut_specialCase:
+                        profit_fee = profit - orderMoney*feeRate - (orderMoney+pl_round)*stopLoss_feeRate
+                    else:
+                        profit_fee = profit - orderMoney*feeRate - (orderMoney+pl_round)*feeRate
+                
                 profit_fee_list.append(profit_fee)
                 buytocover.append(i+1)
                 
                 # Realized PnL
                 profit_realized = pl_round
-                profit_fee_realized = pl_round - orderMoney*feeRate - (orderMoney+pl_round)*feeRate
+                if stopLoss and lossOut_specialCase:
+                    profit_fee_realized = pl_round - orderMoney*feeRate - (orderMoney+pl_round)*stopLoss_feeRate
+                else:
+                    profit_fee_realized = pl_round - orderMoney*feeRate - (orderMoney+pl_round)*feeRate
                 fund += profit_fee_realized
 
                 profit_list_realized.append(profit_realized)
@@ -905,3 +956,4 @@ def dictType_output(output_tuple):
                    'profit_fee_list_realized': output_tuple[7], 'profit_fee_list_realized_time': output_tuple[8]}
     
     return output_dict
+
