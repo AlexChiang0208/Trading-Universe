@@ -1,19 +1,20 @@
 import os
 import glob
 import time
-import numpy as np
 import pandas as pd
-import datetime as dt
 import urllib.request
 
 from module.data import get_tidyData
+
+df_dict = {}
+parent_dir = "raw_klines/"
 
 _ufutures = glob.glob(f"raw_klines/*_ufutures")
 ufutures_symbols = [i.split('/')[1].split('_ufutures')[0] for i in _ufutures]
 
 for j in ufutures_symbols:
     try:
-        globals()[f'df_{j}_ufutures'] = get_tidyData(symbol=j, data_type='ufutures')
+        df_dict[f'{j}_ufutures'] = get_tidyData(symbol=j, data_type='ufutures')
     except:
         print(f'error: no ufutures_symbols : {j}')
         ufutures_symbols.remove(j)
@@ -23,21 +24,17 @@ spot_symbols = [i.split('/')[1].split('_spot')[0] for i in _spot]
 
 for i in spot_symbols:
     try:
-        globals()[f'df_{i}_spot'] = get_tidyData(symbol=i, data_type='spot')
+        df_dict[f'{i}_spot'] = get_tidyData(symbol=i, data_type='spot')
     except:
         print(f'error: no spot_symbols : {i}')
         spot_symbols.remove(i)    
 
-parent_dir = "raw_klines/"
 
-
-# run error symbol only
-# df_ENJUSDT_ufutures = get_tidyData(symbol='ENJUSDT', data_type='ufutures')
-# df_BTCUSDT_230630_ufutures = get_tidyData(symbol='BTCUSDT_230630', data_type='ufutures')
-# df_INJUSDT_ufutures = get_tidyData(symbol='INJUSDT', data_type='ufutures')
-# df_XLMUSDT_spot = get_tidyData(symbol='XLMUSDT', data_type='spot')
+# run error-symbol only
+# df_dict[f'ENJUSDT_ufutures'] = get_tidyData(symbol='ENJUSDT', data_type='ufutures')
+# df_dict[f'XLMUSDT_spot'] = get_tidyData(symbol='XLMUSDT', data_type='spot')
+# ufutures_symbols = ['ENJUSDT']
 # spot_symbols = ['XLMUSDT']
-# ufutures_symbols = ['BTCUSDT_230630','ENJUSDT','INJUSDT']
 
 
 for dataList, typeName in zip([ufutures_symbols, spot_symbols], ["ufutures", "spot"]):
@@ -49,7 +46,7 @@ for dataList, typeName in zip([ufutures_symbols, spot_symbols], ["ufutures", "sp
 
     for data in dataList:
         try:
-            df = globals()[f'df_{data}_{typeName}']
+            df = df_dict[f'{data}_{typeName}']
 
             start_date = df.index[0].date()
             end_date = df.index[-1].date()
@@ -78,6 +75,5 @@ for dataList, typeName in zip([ufutures_symbols, spot_symbols], ["ufutures", "sp
                             continue
 
         except Exception as e:
-            print(f'{data}_{typeName} error : {e}') ## hand check each error symbol
+            print(f'{data}_{typeName} error : {e}') ## hand check each error-symbol
             continue
-
