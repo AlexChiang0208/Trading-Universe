@@ -13,27 +13,37 @@ def get_tidyData(symbol='BTCUSDT', data_type='ufutures'):
     columns_name = ['openTime', 'Open', 'High', 'Low', 'Close', 'Volume', 'closeTime', 'quoteVolume', 'numTrade', 'takerBuyVolume', 'takerBuyQuoteVolume', 'ignore']
     ticker_path = glob.glob(f"raw_klines/{symbol}_{data_type}/*.zip")
     ticker_path = sorted(ticker_path)
-
+    
+    error_path = []
     combine_list = []
     for path in ticker_path:
-        temp = pd.read_csv(path, header=None, index_col=None)
-        if temp.iloc[0,0] == "open_time":
-            temp = temp.iloc[1:]
-        combine_list.append(temp)
+        try:
+            temp = pd.read_csv(path, header=None, index_col=None)
+            if temp.iloc[0,0] == "open_time":
+                temp = temp.iloc[1:]
+            combine_list.append(temp)
+        except Exception as e:
+            print(f'error : {e} ; path : {path}')
+            error_path.append(path)
+            continue
 
-    df_ = pd.concat(combine_list, axis=0)
-    df_.columns = columns_name
-    df_['openTime']= pd.to_datetime(df_['openTime'], unit='ms')
-    df_ = df_.drop(['ignore', 'closeTime'], axis=1)
-    df_ = df_.sort_values('openTime', ascending=True)
-    df_ = df_.set_index('openTime')
-    df_ = df_.astype(float)
-    df_['takerSellVolume'] = df_['Volume'] - df_['takerBuyVolume']
-    df_['takerSellQuoteVolume'] = df_['quoteVolume'] - df_['takerBuyQuoteVolume']
-    df_['avgTradeVolume'] = df_['quoteVolume'] / df_['numTrade']
-    df_ = df_[~df_.index.duplicated(keep='first')]
-
-    return df_
+    if len(error_path) != 0:
+        print(f'{symbol}_{data_type} return error_path; download again!')
+        return error_path
+    
+    else:
+        df_ = pd.concat(combine_list, axis=0)
+        df_.columns = columns_name
+        df_['openTime']= pd.to_datetime(df_['openTime'], unit='ms')
+        df_ = df_.drop(['ignore', 'closeTime'], axis=1)
+        df_ = df_.sort_values('openTime', ascending=True)
+        df_ = df_.set_index('openTime')
+        df_ = df_.astype(float)
+        df_['takerSellVolume'] = df_['Volume'] - df_['takerBuyVolume']
+        df_['takerSellQuoteVolume'] = df_['quoteVolume'] - df_['takerBuyQuoteVolume']
+        df_['avgTradeVolume'] = df_['quoteVolume'] / df_['numTrade']
+        df_ = df_[~df_.index.duplicated(keep='first')]
+        return df_
 
 
 def resample_symbol(df_symbol, rule='1H'):
