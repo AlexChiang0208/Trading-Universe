@@ -297,3 +297,23 @@ class Performance:
         return
 
 
+def create_position_series(output_dict, time_index):
+
+    '''1 means long position ; when 1 appears, enter the market at THAT Open price'''
+
+    buy = output_dict['buy']
+    sell = output_dict['sell']
+    sellshort = output_dict['sellshort']
+    buytocover = output_dict['buytocover']
+
+    position_ts = np.zeros(len(time_index))
+
+    for i in range(len(buy)):
+        position_ts[buy[i]:sell[i]+1] = 1
+
+    for i in range(len(sellshort)):
+        position_ts[sellshort[i]:buytocover[i]+1] = -1
+
+    position_ts = pd.Series(position_ts, index=time_index)
+
+    return position_ts
