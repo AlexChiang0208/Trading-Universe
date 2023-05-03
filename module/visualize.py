@@ -205,11 +205,11 @@ class Performance:
         self.equity['equity'] = self.equity['profitfee'] + fund
         self.return_series = (self.equity['equity'] / self.equity['equity'][0]) * 100
         self.percent_return_series = self.return_series - self.return_series.shift(1)
-        self.buy = output_dict['buy']
-        self.sell = output_dict['sell']
-        self.trades = len(output_dict['buy']) + len(output_dict['sell'])
+        self.trades = len(output_dict['buy']) + len(output_dict['sellshort'])
 
     def calculate_result(self):
+        self.buy = self.output_dict['buy']
+        self.sell = self.output_dict['sell']
         self.sellshort = self.output_dict['sellshort']
         self.buytocover = self.output_dict['buytocover']
         self.profit_list_realized = self.output_dict['profit_list_realized']
@@ -264,18 +264,21 @@ class Performance:
         min_tradePeriod = min(self.tradePeriod)
         mean_tradePeriod = np.round(np.mean(self.tradePeriod),2)
 
-        if len(self.profit_fee_list_realized) != 0:
-            winRate = len([i for i in self.profit_fee_list_realized if i > 0]) / len(self.profit_fee_list_realized)
+        # It may have slight errors, one can verify by comparing len() with the number of trades.
+        profit_fee_list_realized_noZero = [x for x in self.profit_fee_list_realized if x != 0]
+
+        if len(profit_fee_list_realized_noZero) != 0:
+            winRate = len([i for i in profit_fee_list_realized_noZero if i >= 0]) / len(profit_fee_list_realized_noZero)
             winRate = np.round(winRate*100,2)
         else:
             winRate = np.nan
-        if abs(sum([i for i in self.profit_fee_list_realized if i < 0])) != 0:
-            profitFactor = sum([i for i in self.profit_fee_list_realized if i > 0]) / abs(sum([i for i in self.profit_fee_list_realized if i < 0]))
+        if abs(sum([i for i in profit_fee_list_realized_noZero if i < 0])) != 0:
+            profitFactor = sum([i for i in profit_fee_list_realized_noZero if i >= 0]) / abs(sum([i for i in profit_fee_list_realized_noZero if i < 0]))
             profitFactor = np.round(profitFactor,2)
         else:
             profitFactor = np.nan
-        if abs(np.mean([i for i in self.profit_fee_list_realized if i < 0])) != 0:
-            winLossRatio = np.mean([i for i in self.profit_fee_list_realized if i > 0]) / abs(np.mean([i for i in self.profit_fee_list_realized if i < 0]))
+        if abs(np.mean([i for i in profit_fee_list_realized_noZero if i < 0])) != 0:
+            winLossRatio = np.mean([i for i in profit_fee_list_realized_noZero if i >= 0]) / abs(np.mean([i for i in profit_fee_list_realized_noZero if i < 0]))
             winLossRatio = np.round(winLossRatio,2)
         else:
             winLossRatio = np.nan
@@ -317,3 +320,4 @@ def create_position_series(output_dict, time_index):
     position_ts = pd.Series(position_ts, index=time_index)
 
     return position_ts
+
