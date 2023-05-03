@@ -264,7 +264,7 @@ class Performance:
         min_tradePeriod = min(self.tradePeriod)
         mean_tradePeriod = np.round(np.mean(self.tradePeriod),2)
 
-        # It may have slight errors, one can verify by comparing len() with the number of trades.
+        # It may have slight bias if zero earn in any trade. Check whether trades is equal to len().
         profit_fee_list_realized_noZero = [x for x in self.profit_fee_list_realized if x != 0]
 
         if len(profit_fee_list_realized_noZero) != 0:
