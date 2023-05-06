@@ -23,28 +23,42 @@ Modular backtesting tools (Python)
 
 ## Example
 
-RSI Strategy in singleTrade_example.py
+* RSI Strategy in singleTrade_example.py
+	* The data.df is a resampled DataFrame object, which can be utilized effectively.
+	* entryLong / entrySellShort are the entry condition.
+	* exitShort / exitBuyToCover are the exit condition.
+	* For more details on the backtesting functions, please refer to "[Exit Parameters Instruction](instruction.md)".
 
-#### result.show_performance()
-![Screen Shot 2022-12-13 at 1 35 11 PM](https://user-images.githubusercontent.com/77842290/207235117-bf705239-d101-44aa-a62b-d364501baa66.png)
+```python
+data = Data(df_symbol=df_btc_origin, rule='30T')
 
-#### result.draw_unrealized_profit()
-![output1](https://user-images.githubusercontent.com/77842290/207234958-5a4c72ed-925a-4253-95f2-86c17aae310d.png)
+data.df['rsi'] = talib.RSI(data.df['Close'], 12)
+data.df['rsi_r1'] = data.df['rsi'].rolling(12).mean()
+data.df['rsi_r2'] = data.df['rsi'].rolling(24).mean()
 
-#### result.draw_realized_profit()
-![output2](https://user-images.githubusercontent.com/77842290/207234967-f695aa21-2a8c-479b-900e-656c4ff49c87.png)
+## entry condition
+entryLong = (data.df['rsi_r1'] > data.df['rsi_r2']) & (data.df['rsi_r1'] > 70)
+entrySellShort =  (data.df['rsi_r1'] < data.df['rsi_r2']) & (data.df['rsi_r1'] < 30)
 
-#### result.draw_equity_curve(text_position='2022-01-01')
+## exit condition
+exitShort = data.df['rsi_r1'] < 30
+exitBuyToCover = data.df['rsi_r1'] > 70
+
+data.type_setting(entryLong, entrySellShort, exitShort, exitBuyToCover, longOnly=False, shortOnly=False)
+output_dict = dictType_output(backtesting(data.input_arr, exit_profitOut=True, exParam2=0.02, fund=100)) # 2% stop profit
+```
+
+```python
+result.draw_equity_curve(text_position='2022-01-01')
+```
+
 ![output3](https://user-images.githubusercontent.com/77842290/207234980-5e53caf3-3ca3-4eac-9e87-fd9cf8a0ae9d.png)
 
-#### result.draw_monthly_equity(text_position='2022-01-01')
+```python
+result.draw_monthly_equity(text_position='2022-01-01')
+```
+
 ![output4](https://user-images.githubusercontent.com/77842290/207234996-c8af9f18-1f26-4104-88b4-0a60711930cf.png)
-
-#### result.draw_daily_distribution(bins=40)
-![output5](https://user-images.githubusercontent.com/77842290/207235000-a5e37a5b-bb11-4d92-8329-ee21570dec3b.png)
-
-#### result.draw_hold_position()
-![output6](https://user-images.githubusercontent.com/77842290/207235017-22acd140-9a23-4dc1-980a-afc2dc4d832f.png)
 
 ## 支援
 1. 考慮翻單的獲利情況 (假如出場時滿足對邊進場條件)
@@ -53,6 +67,12 @@ RSI Strategy in singleTrade_example.py
 4. 配對交易回測 - 等資金下注
 5. 補充幣安月資料的缺漏天數
 
+## 不支援 (歡迎協作)
+1. 加減碼邏輯
+2. 永續合約之資金費率
+3. 配對交易非等資金下注
+4. 台指期或其他市場
+5. tick data 回測
 
 ## 備注
 1. resample 使用 (left, left) 為開盤時間 K 棒 ; resample 加一分鐘再使用 (right, right) 為收盤時間 K 棒
@@ -61,4 +81,7 @@ RSI Strategy in singleTrade_example.py
 3. 回測限制 : 如果同一根 K 棒同時碰到停損及停利, 視為停損
 4. 盤中停損另加滑價 (stopLoss_slippageAdd)
 5. 對外使用請註明出處 (**Please indicate the source for external use.**)
-
+6. 有空的話會再把 Document 和程式註解寫豐富一點
+7. 聯絡方式
+	* email : atigerhh@gmail.com
+	* linkedin : https://www.linkedin.com/in/alex-chiang-0208/
