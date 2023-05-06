@@ -23,7 +23,7 @@ Modular backtesting tools (Python)
 
 ## Example
 
-* RSI Strategy in singleTrade_example.py
+* RSI Strategy in [singleTrade_example.py](Strategy/singleTrade_example.py)
 	* The data.df is a resampled DataFrame object, which can be utilized effectively.
 	* entryLong / entrySellShort are the entry condition.
 	* exitShort / exitBuyToCover are the exit condition.
