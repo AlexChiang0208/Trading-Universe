@@ -1,4 +1,6 @@
+import time
 import glob
+import requests
 import numpy as np
 import pandas as pd
 import datetime as dt
@@ -44,6 +46,47 @@ def get_tidyData(symbol='BTCUSDT', data_type='ufutures'):
         df_['avgTradeVolume'] = df_['quoteVolume'] / df_['numTrade']
         df_ = df_[~df_.index.duplicated(keep='first')]
         return df_
+
+
+def update_newData(df_origin, symbol='BTCUSDT', data_type='ufutures'):
+    
+    if data_type == 'ufutures':
+        base_url = f'https://fapi.binance.com/fapi/v1/klines?symbol={symbol}&interval=1m&limit=1500'
+    elif data_type == 'spot':
+        base_url = f'https://api.binance.com/api/v3/klines?symbol={symbol}&interval=1m&limit=1000'
+
+    data_list = []
+    start_time = int(df_origin.index[-1].timestamp() * 1000)
+    endTime = int((dt.datetime.now().timestamp()) * 1000)   
+    
+    while start_time < endTime:
+        url = f'{base_url}&startTime={start_time}&endTime={endTime}'
+        while True:
+            response = requests.get(url)
+            if response.status_code == 200:
+                break
+            else:
+                time.sleep(0.2)
+
+        data = response.json()
+        data_list.extend(data)
+        start_time = int(data[-1][0]) + 60000
+
+    columns_name = ['openTime', 'Open', 'High', 'Low', 'Close', 'Volume', 'closeTime', 'quoteVolume', 'numTrade', 'takerBuyVolume', 'takerBuyQuoteVolume', 'ignore']
+    df_new = pd.DataFrame(data_list, columns=columns_name)
+    df_new = df_new.astype(float)
+    df_new['openTime'] = pd.to_datetime(df_new['openTime'], unit='ms')
+    df_new = df_new.drop(['ignore', 'closeTime'], axis=1)
+    df_new = df_new.sort_values('openTime', ascending=True)
+    df_new = df_new.set_index('openTime')
+    df_new['takerSellVolume'] = df_new['Volume'] - df_new['takerBuyVolume']
+    df_new['takerSellQuoteVolume'] = df_new['quoteVolume'] - df_new['takerBuyQuoteVolume']
+    df_new['avgTradeVolume'] = df_new['quoteVolume'] / df_new['numTrade']
+    
+    df_ = pd.concat([df_origin, df_new])
+    df_ = df_[~df_.index.duplicated(keep='first')]
+
+    return df_
 
 
 def resample_symbol(df_symbol, rule='1H'):
@@ -219,3 +262,4 @@ class DataPair:
                                    self.entryLong_arr, self.entrySellShort_arr, 
                                    self.exitShort_arr, self.exitBuyToCover_arr, 
                                    self.vol_arr])
+
