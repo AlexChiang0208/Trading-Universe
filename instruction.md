@@ -5,7 +5,9 @@
   * 相關參數
     * from_exit_condition = False (True : exit_condition 後才開始計時)
 * 停利出場 (exit_profitOut)
-  * 固定 exParam2% 停利
+  * profitOut_condition
+    * (1) 固定 exParam2% 停利
+    * (2) 固定 exParam2 個 VOL 停利 (VOL 由外部提供 ; 可以 input ATR or STD)
 * 停損出場 (exit_lossOut)
   * lossOut_condition
     * (1) 固定 exParam3% 停損
