@@ -4,7 +4,7 @@ from numba import jit
 def backtesting(input_arr, fund=100, leverage=0, takerFee=0.0004, 
                 slippage=0.0001, stopLoss_slippageAdd=0.001,
                 exit_timeOut=False, exParam1=20, from_exit_condition=False,
-                exit_profitOut=False, exParam2=0.02,
+                exit_profitOut=False, profitOut_condition=1, exParam2=0.02,
                 exit_lossOut=False, lossOut_condition=1, exParam3=0.05, 
                 price_trigger3='HL', risk_control=False, rc_percent=0.5,
                 exit_condition=1, exParam0=0, price_trigger0='HL'
@@ -83,16 +83,30 @@ def backtesting(input_arr, fund=100, leverage=0, takerFee=0.0004,
         # stop profit condition
         if exit_profitOut == True:
             if exitSwitch == True:
-                if LS == 'L':
-                    stopProfit = high_arr[i] >= open_arr[exT] * (1+exParam2)
-                    if stopProfit:
-                        exitPrice = open_arr[exT] * (1+exParam2)
-                elif LS == 'S':
-                    stopProfit = low_arr[i] <= open_arr[exT] * (1-exParam2)
-                    if stopProfit:
-                        exitPrice = open_arr[exT] * (1-exParam2)
-                else:
-                    stopProfit = False
+
+                if profitOut_condition == 1:
+                    if LS == 'L':
+                        stopProfit = high_arr[i] >= open_arr[exT] * (1+exParam2)
+                        if stopProfit:
+                            exitPrice = open_arr[exT] * (1+exParam2)
+                    elif LS == 'S':
+                        stopProfit = low_arr[i] <= open_arr[exT] * (1-exParam2)
+                        if stopProfit:
+                            exitPrice = open_arr[exT] * (1-exParam2)
+                    else:
+                        stopProfit = False
+
+                elif profitOut_condition == 2:
+                    if LS == 'L':
+                        stopProfit = high_arr[i] >= open_arr[exT] + exParam2*vol_arr[exT-1]
+                        if stopProfit:
+                            exitPrice = open_arr[exT] + exParam2*vol_arr[exT-1]
+                    elif LS == 'S':
+                        stopProfit = low_arr[i] <= open_arr[exT] - exParam2*vol_arr[exT-1]
+                        if stopProfit:
+                            exitPrice = open_arr[exT] - exParam2*vol_arr[exT-1]
+                    else:
+                        stopProfit = False
 
         # stop loss condition
         if exit_lossOut == True:
@@ -501,7 +515,7 @@ def backtesting(input_arr, fund=100, leverage=0, takerFee=0.0004,
 def backtestingPair(input_arr, fund=100, leverage=0, takerFee=0.0004, 
                     slippage=0.0001, stopLoss_slippageAdd=0.001,
                     exit_timeOut=False, exParam1=20, from_exit_condition=False,
-                    exit_profitOut=False, exParam2=0.02,
+                    exit_profitOut=False, profitOut_condition=1, exParam2=0.02,
                     exit_lossOut=False, lossOut_condition=1, exParam3=0.05, risk_control=False, rc_percent=0.5,
                     exit_condition=1, exParam0=0
                     ):
@@ -588,18 +602,25 @@ def backtestingPair(input_arr, fund=100, leverage=0, takerFee=0.0004,
         # stop profit condition
         if exit_profitOut == True:
             if exitSwitch == True:
-                if LS == 'L':
-                    stopProfit = (((closeA_arr[i] / openA_arr[exT] - 1) + (1 - closeB_arr[i] / openB_arr[exT])) / 2) >= exParam2
-                    if stopProfit:
-                        exitPriceA = closeA_arr[i]
-                        exitPriceB = openB_arr[exT] * (closeA_arr[i] / openA_arr[exT] - 2*exParam2)
-                elif LS == 'S':
-                    stopProfit = (((1 - closeA_arr[i] / openA_arr[exT]) + (closeB_arr[i] / openB_arr[exT] - 1)) / 2) >= exParam2
-                    if stopProfit:
-                        exitPriceA = closeA_arr[i]
-                        exitPriceB = openB_arr[exT] * (2*exParam2 + closeA_arr[i] / openA_arr[exT])
-                else:
-                    stopProfit = False
+
+                if profitOut_condition == 1:
+                    if LS == 'L':
+                        stopProfit = (((closeA_arr[i] / openA_arr[exT] - 1) + (1 - closeB_arr[i] / openB_arr[exT])) / 2) >= exParam2
+                        if stopProfit:
+                            exitPriceA = closeA_arr[i]
+                            exitPriceB = openB_arr[exT] * (closeA_arr[i] / openA_arr[exT] - 2*exParam2)
+                    elif LS == 'S':
+                        stopProfit = (((1 - closeA_arr[i] / openA_arr[exT]) + (closeB_arr[i] / openB_arr[exT] - 1)) / 2) >= exParam2
+                        if stopProfit:
+                            exitPriceA = closeA_arr[i]
+                            exitPriceB = openB_arr[exT] * (2*exParam2 + closeA_arr[i] / openA_arr[exT])
+                    else:
+                        stopProfit = False
+
+                elif profitOut_condition == 2: 
+                    ## ATR Stop Profit, update when I need.
+                    print('no this function of profitOut_condition=2')
+                    return
 
         # stop loss condition
         if exit_lossOut == True:
@@ -956,4 +977,3 @@ def dictType_output(output_tuple):
                    'profit_fee_list_realized': output_tuple[7], 'profit_fee_list_realized_time': output_tuple[8]}
     
     return output_dict
-
