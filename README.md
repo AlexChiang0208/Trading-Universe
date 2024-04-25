@@ -83,5 +83,5 @@ result.draw_monthly_equity(text_position='2022-01-01')
 5. 對外使用請註明出處 (**Please indicate the source for external use.**)
 6. 有空的話會再把 Document 和程式註解寫豐富一點
 7. 聯絡方式
-	* email : atigerhh@gmail.com
+	* email : yuhung.career@gmail.com
 	* linkedin : https://www.linkedin.com/in/alex-chiang-0208/
