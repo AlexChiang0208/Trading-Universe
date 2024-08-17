@@ -32,6 +32,30 @@ def fitness_func(individual):
 
 # %%
 
+# Domains
+domain_range = [
+    [round(i,2) for i in np.linspace(-5.12, 5.12, 125)],
+    [round(i,2) for i in np.linspace(-5.12, 5.12, 125)],
+    [round(i,2) for i in np.linspace(-5.12, 5.12, 125)],
+    [round(i,2) for i in np.linspace(-5.12, 5.12, 125)]
+]
+
+# Fitness function
+def fitness_func(individual):
+
+    '''
+    解最小值
+    '''
+
+    fitness_value = 10 * len(individual)
+
+    for param in individual:
+        fitness_value += (param ** 2 - 10 * np.cos(2 * np.pi * param))
+
+    return fitness_value
+
+# %%
+
 ### Genetic Algorithm ###
 
 # Hyperparameters
@@ -41,7 +65,7 @@ ELITE_SIZE = 10
 GENERATIONS = 13
 CROSSOVER_RATE = 0.7
 MUTATION_RATE = 0.01
-OBJECTIVE = 'maximum'
+OBJECTIVE = 'minimum'
 SELECTION_STG = 'uniform'
 MOVING_STG = True
 expended_ratio = 0.15
@@ -61,7 +85,7 @@ result
 ### Random Search ###
 
 # Hyperparameters
-OBJECTIVE = 'maximum'
+OBJECTIVE = 'minimum'
 search_times = 1500
 save_process = False
 
@@ -81,7 +105,7 @@ alpha = 0.97
 Q = 5
 expended_ratio = 0.15 
 max_count = 1500
-OBJECTIVE = 'maximum'
+OBJECTIVE = 'minimum'
 save_process = False
 
 sa_obj = SimulatedAnnealing(domain_range, fitness_func, T0, Tf, alpha, Q, 
@@ -95,7 +119,7 @@ result
 ### Particle Swarm Optimization ###
 
 # Hyperparameters
-OBJECTIVE = 'maximum'
+OBJECTIVE = 'minimum'
 num_particles = 50
 num_iteration = 30
 Velocity_Strategy = 'zero'
@@ -128,14 +152,14 @@ result
 
 # Domains
 domain_range = [
-    list(range(1, 101, 20)),
-    list(range(5, 81, 20)),
-    [round(i,1) for i in np.arange(1.5, 2.6, 0.5)],
-    [round(i,2) for i in np.linspace(-5.12, 5.12, 25)]
+    [round(i,2) for i in np.linspace(-5.12, 5.12, 7)],
+    [round(i,2) for i in np.linspace(-5.12, 5.12, 6)],
+    [round(i,2) for i in np.linspace(-5.12, 5.12, 6)],
+    [round(i,2) for i in np.linspace(-5.12, 5.12, 6)]
     ]
 
 # Hyperparameters
-OBJECTIVE = 'maximum'
+OBJECTIVE = 'minimum'
 save_process = False
 
 gs_obj = GridSearch(domain_range, fitness_func, OBJECTIVE, save_process)
