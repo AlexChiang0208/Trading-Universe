@@ -1,6 +1,7 @@
 import math
 import time
 import random
+import bisect
 import itertools
 import numpy as np
 from tqdm import tqdm
@@ -20,9 +21,9 @@ from scipy.stats import rankdata
     - dynamic hyperparameters
     - etc.
 3 新增演算法
-    - PSO (Particle Swarm Optimization)
     - BAS (Beetle Antennae Search)
     - 差分進化演算法 (Differential Evolution)
+    - Optuna 框架 (https://github.com/optuna/optuna)
 
 Thanks for 北科大工業工程管理系, 啟發式演算法
 https://hackmd.io/@AlexChiang/Hkxp317Ao
@@ -211,7 +212,7 @@ class GeneticAlgorithm:
         process_dict = {}
 
         # Start of Genetic Algorithm
-        for _ in tqdm(range(self.GENERATIONS)):
+        for _ in tqdm(range(self.GENERATIONS), desc="Start Genetic Algorithm"):
 
             if _ == 0:
                 population = [[random.choice(domain) for domain in self.domain_range] for _ in range(self.INI_SIZE)]
@@ -541,3 +542,202 @@ class SimulatedAnnealing:
 
         return result_dict
 
+
+class ParticleSwarmOptimization:
+
+    def __init__(self, domain_range, fitness_func, OBJECTIVE='maximum', num_particles=50, 
+                 num_iteration=1000, Velocity_Strategy='zero', W_MAX=0.9, W_MIN=0.4, W_Strategy='decrease', 
+                 C1_MAX=2, C1_MIN=1, C1_Strategy='increase', C2_MAX=2, C2_MIN=1, C2_Strategy='decrease', 
+                 R_MAX=0.5, R_MIN=0, R_Strategy='decrease', variable_type='discrete', save_process=False):
+
+        # Hyperparameters
+        self.domain_range = domain_range
+        self.fitness_func = fitness_func
+        self.OBJECTIVE = OBJECTIVE
+        self.num_particles = num_particles
+        self.num_iteration = num_iteration
+        self.Velocity_Strategy = Velocity_Strategy
+        self.W_MAX = W_MAX
+        self.W_MIN = W_MIN
+        self.W_Strategy = W_Strategy
+        self.C1_MAX = C1_MAX
+        self.C1_MIN = C1_MIN
+        self.C1_Strategy = C1_Strategy
+        self.C2_MAX = C2_MAX
+        self.C2_MIN = C2_MIN
+        self.C2_Strategy = C2_Strategy
+        self.R_MAX = R_MAX
+        self.R_MIN = R_MIN
+        self.R_Strategy = R_Strategy
+        self.variable_type = variable_type
+        self.save_process = save_process
+
+        self.DIMENSTIONS = len(domain_range)
+        self.domain_max = np.array([max(dim) for dim in domain_range])
+        self.domain_min = np.array([min(dim) for dim in domain_range])
+
+        # Give a random seed
+        seed = get_random_seed()
+        random.seed(seed)
+
+    def initialize_particles_position(self):
+        particles_position = np.array([[random.choice(domain) for domain in self.domain_range] for _ in range(self.num_particles)])
+        return particles_position
+
+    def initialize_particles_velocity(self):
+
+        if self.Velocity_Strategy == 'zero':
+            self.particle_velocity = np.zeros((self.num_particles, self.DIMENSTIONS))
+        elif self.Velocity_Strategy == 'random':
+            r = np.random.rand(self.num_particles, self.DIMENSTIONS)
+            random_particles_position = self.initialize_particles_position()
+            self.particle_velocity = r * (random_particles_position - self.particles_position)
+
+    def update_particles_position(self):
+        self.particles_position += self.particle_velocity
+
+    def initialize_pBest_gBest(self):
+
+        self.pBest = {}
+        self.gBest = {}
+
+        if self.OBJECTIVE == 'maximum':
+            initial_value = float('-inf')
+        elif self.OBJECTIVE == 'minimum':
+            initial_value = float('inf')
+
+        self.pBest['position'] = self.particles_position.copy()
+        self.pBest['value'] = np.full(self.num_particles, initial_value)
+        self.gBest['position'] = np.zeros(self.DIMENSTIONS)
+        self.gBest['value'] = initial_value
+
+    def linear_adaptive_strategy(self, MAX, MIN, ITER, strategy):
+
+        if strategy == 'increase':
+            adaptive_value = MIN + (MAX - MIN) / (self.num_iteration-1) * (ITER-1)
+        elif strategy == 'decrease':
+            adaptive_value = MAX - (MAX - MIN) / (self.num_iteration-1) * (ITER-1)
+
+        return adaptive_value
+
+    def update_particles_velocity(self, ITER):
+
+        # first iteration
+        if ITER == 0:
+            first_round_adjusted = 0
+        else:
+            first_round_adjusted = 1
+
+        # generate r1, r2 and r3
+        r1 = np.random.rand(self.num_particles, self.DIMENSTIONS)
+        r2 = np.random.rand(self.num_particles, self.DIMENSTIONS)
+        r3 = np.random.rand(self.num_particles, self.DIMENSTIONS)
+
+        # generate a random_component velocity
+        random_particles_position = self.initialize_particles_position()
+
+        # update W, C1 and C2 (add a random_component with variable R)
+        W = self.linear_adaptive_strategy(self.W_MAX, self.W_MIN, int(ITER+1), self.W_Strategy)
+        C1 = self.linear_adaptive_strategy(self.C1_MAX, self.C1_MIN, int(ITER+1), self.C1_Strategy)
+        C2 = self.linear_adaptive_strategy(self.C2_MAX, self.C2_MIN, int(ITER+1), self.C2_Strategy)
+        R = self.linear_adaptive_strategy(self.R_MAX, self.R_MIN, int(ITER+1), self.R_Strategy)
+
+        # update particle velocity
+        inertia_component = W * self.particle_velocity
+        cognition_component = C1 * r1 * (self.pBest['position'] - self.particles_position) * first_round_adjusted
+        social_component = C2 * r2 * (self.gBest['position'] - self.particles_position) * first_round_adjusted
+        random_component = R * r3 * random_particles_position
+        self.particle_velocity = inertia_component + cognition_component + social_component + random_component
+
+    def adjust_particle_position(self):
+    
+        if self.variable_type == 'continuous':
+            adjust_postion = np.clip(self.particles_position, self.domain_min, self.domain_max)
+            self.particles_position = adjust_postion
+        
+        elif self.variable_type == 'discrete':
+            for idx in range(self.num_particles):
+                adjust_postion = []
+                for params_index, value in enumerate(self.particles_position[idx]):
+                    if value > self.domain_range[params_index][-1]:
+                        position_index = -1
+                    else:
+                        position_index = bisect.bisect_left(self.domain_range[params_index], value)
+
+                    adjust_postion.append(self.domain_range[params_index][position_index])
+                self.particles_position[idx] = adjust_postion
+
+    def cal_fitness(self, record_dict={}):
+
+        fitnesses = []
+
+        for individual in self.particles_position:
+
+            if self.variable_type == 'continuous':
+                fitness_ = self.fitness_func(individual)
+
+            elif self.variable_type == 'discrete':
+                individual_tuple = tuple(individual)
+
+                if individual_tuple in record_dict.keys():
+                    fitness_ = record_dict[individual_tuple]
+                else:
+                    fitness_ = self.fitness_func(individual)
+                    record_dict[individual_tuple] = fitness_
+
+            fitnesses.append(fitness_)
+            
+        return fitnesses, record_dict
+
+    def update_pBest_gBest(self, fitnesses):
+
+        if self.OBJECTIVE == 'maximum':
+            for i in range(self.num_particles):
+                if fitnesses[i] > self.pBest['value'][i]:
+                    self.pBest['value'][i] = fitnesses[i]
+                    self.pBest['position'][i] = self.particles_position[i].copy()
+
+                if fitnesses[i] > self.gBest['value']:
+                    self.gBest['value'] = fitnesses[i]
+                    self.gBest['position'] = self.particles_position[i].copy()
+
+        elif self.OBJECTIVE == 'minimum':
+            for i in range(self.num_particles):
+                if fitnesses[i] < self.pBest['value'][i]:
+                    self.pBest['value'][i] = fitnesses[i]
+                    self.pBest['position'][i] = self.particles_position[i].copy()
+
+                if fitnesses[i] < self.gBest['value']:
+                    self.gBest['value'] = fitnesses[i]
+                    self.gBest['position'] = self.particles_position[i].copy()
+
+    # Main function
+    def optimize(self):
+
+        result_dict = {}
+        record_dict = {}
+        process_dict = {}
+
+        self.particles_position = self.initialize_particles_position()
+        self.initialize_particles_velocity()
+        self.initialize_pBest_gBest()
+
+        for _ in tqdm(range(self.num_iteration), desc="Start Particle Swarm Optimization"):
+
+            self.update_particles_velocity(_)
+            self.update_particles_position()
+            self.adjust_particle_position()
+            fitnesses, record_dict = self.cal_fitness(record_dict)
+            self.update_pBest_gBest(fitnesses)
+
+            if self.save_process == True:
+                process_dict[str(_)] = {'population': self.particles_position.copy(), 'fitnesses': fitnesses.copy(),
+                                        'best_individual': self.gBest['position'].copy(), 'best_fitness': self.gBest['value'].copy()
+                                        }
+            
+        result_dict['best_individual'] = self.gBest['position']
+        result_dict['best_fitness'] = self.gBest['value']
+        result_dict['cal_times'] = int(self.num_particles * self.num_iteration)
+        result_dict['process_dict'] = process_dict
+
+        return result_dict
