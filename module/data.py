@@ -10,24 +10,36 @@ import talib
 from talib import abstract
 
 
-def get_tidyData(symbol='BTCUSDT', data_type='ufutures'):
+def convert_mixed_timestamp(df: pd.DataFrame, col: str = 'openTime') -> pd.DataFrame:
+
+    is_us = df[col].map(lambda x: len(str(int(x))) >= 16)
+    df_us = df[is_us].copy()
+    df_ms = df[~is_us].copy()
+
+    df_us[col] = pd.to_datetime(df_us[col], unit='us')
+    df_ms[col] = pd.to_datetime(df_ms[col], unit='ms')
+
+    df_out = pd.concat([df_us, df_ms])
+    df_out = df_out.sort_values(col, ascending=True)
+
+    return df_out
+
+
+def get_tidyData_v2(symbol='BTCUSDT', data_type='ufutures', bar_interval='5m', max_workers=5):
+
+    '''using thread pool to get data'''
+
+    def get_data_func(error_path, combine_list, ticker_path, max_workers):
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            executor.map(lambda path: get_data(error_path, combine_list, path), ticker_path)
 
     columns_name = ['openTime', 'Open', 'High', 'Low', 'Close', 'Volume', 'closeTime', 'quoteVolume', 'numTrade', 'takerBuyVolume', 'takerBuyQuoteVolume', 'ignore']
-    ticker_path = glob.glob(f"raw_klines/{symbol}_{data_type}/*.zip")
+    ticker_path = glob.glob(f"raw_klines_{bar_interval}/{symbol}_{data_type}/*.zip")
     ticker_path = sorted(ticker_path)
     
     error_path = []
     combine_list = []
-    for path in ticker_path:
-        try:
-            temp = pd.read_csv(path, header=None, index_col=None)
-            if temp.iloc[0,0] == "open_time":
-                temp = temp.iloc[1:]
-            combine_list.append(temp)
-        except Exception as e:
-            print(f'error : {e} ; path : {path}')
-            error_path.append(path)
-            continue
+    get_data_func(error_path, combine_list, ticker_path, max_workers)
 
     if len(error_path) != 0:
         print(f'{symbol}_{data_type} return error_path; download again!')
@@ -36,9 +48,9 @@ def get_tidyData(symbol='BTCUSDT', data_type='ufutures'):
     else:
         df_ = pd.concat(combine_list, axis=0)
         df_.columns = columns_name
-        df_['openTime']= pd.to_datetime(df_['openTime'], unit='ms')
+        df_ = convert_mixed_timestamp(df_, 'openTime')
         df_ = df_.drop(['ignore', 'closeTime'], axis=1)
-        df_ = df_.sort_values('openTime', ascending=True)
+        # df_ = df_.sort_values('openTime', ascending=True)
         df_ = df_.set_index('openTime')
         df_ = df_.astype(float)
         df_['takerSellVolume'] = df_['Volume'] - df_['takerBuyVolume']
