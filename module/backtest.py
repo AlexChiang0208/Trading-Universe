@@ -1,13 +1,14 @@
 from numba import jit
 
 @jit(nopython=True)
-def backtesting(input_arr, fund=100, leverage=0, takerFee=0.0004, 
-                slippage=0.0001, stopLoss_slippageAdd=0.001,
+def backtesting(input_arr, fund=100, leverage=0, takerFee=0.0003, 
+                slippage=0.0001, stopLoss_slippageAdd=0.0006,
                 exit_timeOut=False, exParam1=20, from_exit_condition=False,
                 exit_profitOut=False, profitOut_condition=1, exParam2=0.02,
                 exit_lossOut=False, lossOut_condition=1, exParam3=0.05, 
                 price_trigger3='HL', risk_control=False, rc_percent=0.5,
-                exit_condition=1, exParam0=0, price_trigger0='HL'
+                exit_condition=1, exParam0=0, price_trigger0='HL',
+                kstop_Y=15, kstop_A=0.8, kstop_X=0.25
                 ):
 
     '''
@@ -54,6 +55,7 @@ def backtesting(input_arr, fund=100, leverage=0, takerFee=0.0004,
     ts2 = 1
     t = 0
     exT = 0
+    kstop_price = 0
 
     for i in range(len(open_arr)):
 
@@ -187,6 +189,42 @@ def backtesting(input_arr, fund=100, leverage=0, takerFee=0.0004,
                             stopLoss = high_arr[i] >= max(high_arr[i-exParam3:i])
                             if stopLoss:
                                 exitPrice = max(high_arr[i-exParam3:i])
+                    else:
+                        stopLoss = False
+
+                elif lossOut_condition == 5: ## recommend stopLoss_slippageAdd=0
+                    if (LS == 'L') or (LS == 'S'):
+                        if ts == 1: ## initialize
+                            if LS == 'L':
+                                kstop_price = close_arr[exT-1] - kstop_Y * vol_arr[exT-1]
+                            elif LS == 'S':
+                                kstop_price = close_arr[exT-1] + kstop_Y * vol_arr[exT-1]
+                        
+                        if LS == 'L': ## long stop condition
+                            stopLoss = low_arr[i] <= kstop_price
+                            if stopLoss:
+                                exitPrice = kstop_price
+
+                        elif LS == 'S': ## short stop condition
+                            stopLoss = high_arr[i] >= kstop_price
+                            if stopLoss:
+                                exitPrice = kstop_price
+                        
+                        if (ts > 1) and (stopLoss == False): ## update kstop_price
+                            R = close_arr[i] - close_arr[i-1]
+
+                            if LS == 'L':
+                                if (close_arr[i] > close_arr[i-1]) and (high_arr[i] > high_arr[i-1]):
+                                    if kstop_price < open_arr[exT]:
+                                        kstop_price += kstop_A * R
+                                    elif kstop_price >= open_arr[exT]:
+                                        kstop_price += (kstop_A - kstop_X) * R
+                            elif LS == 'S':
+                                if (close_arr[i] < close_arr[i-1]) and (low_arr[i] < low_arr[i-1]):
+                                    if kstop_price > open_arr[exT]:
+                                        kstop_price += kstop_A * R
+                                    elif kstop_price <= open_arr[exT]:
+                                        kstop_price += (kstop_A - kstop_X) * R
                     else:
                         stopLoss = False
 
@@ -512,8 +550,8 @@ def backtesting(input_arr, fund=100, leverage=0, takerFee=0.0004,
 
 
 @jit(nopython=True)
-def backtestingPair(input_arr, fund=100, leverage=0, takerFee=0.0004, 
-                    slippage=0.0001, stopLoss_slippageAdd=0.001,
+def backtestingPair(input_arr, fund=100, leverage=0, takerFee=0.0003, 
+                    slippage=0.0001, stopLoss_slippageAdd=0.0006,
                     exit_timeOut=False, exParam1=20, from_exit_condition=False,
                     exit_profitOut=False, profitOut_condition=1, exParam2=0.02,
                     exit_lossOut=False, lossOut_condition=1, exParam3=0.05, risk_control=False, rc_percent=0.5,
