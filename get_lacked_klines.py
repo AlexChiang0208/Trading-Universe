@@ -7,110 +7,120 @@ from tqdm import tqdm
 
 from module.data import get_tidyData
 
-df_dict = {}
-parent_dir = "raw_klines/"
+# Revise file
+bar_interval = '5m' # 5m / 1h
 
-# load ufutures_symbols
-_ufutures = glob.glob(f"raw_klines/*_ufutures")
+df_dict = {}
+parent_dir = f"raw_klines_{bar_interval}"
+print(f'start {bar_interval}')
+
+### load ufutures_symbols ###
+
+_ufutures = glob.glob(f"raw_klines_{bar_interval}/*_ufutures")
 ufutures_symbols = [i.split('/')[1].split('_ufutures')[0] for i in _ufutures]
 ufutures_broken_list = []
 
-for j in tqdm(ufutures_symbols):
-    try:
-        df_dict[f'{j}_ufutures'] = get_tidyData(symbol=j, data_type='ufutures')
-        if type(df_dict[f'{j}_ufutures']) == list:
-            ufutures_broken_list.append(j)
-    except Exception as e:
-        print(f'other error: {e} ; symbol : {j}')
-        ufutures_symbols.remove(j)
-        continue
+while True:
+    data_type = 'ufutures'
+    load_again = list(set(ufutures_symbols) ^ set([i.split(f'_{data_type}')[0] for i in df_dict.keys() if i.split('_')[-1] == data_type]))
+    if len(load_again) == 0:
+        break
+    else:
+        for symbol in tqdm(load_again):
+            try:
+                df_dict[f'{symbol}_{data_type}'] = get_tidyData(symbol=symbol, data_type=data_type, bar_interval=bar_interval)
+                if type(df_dict[f'{symbol}_{data_type}']) == list:
+                    ufutures_broken_list.append(symbol)
+            except Exception as e:
+                print(f'other error: {e} ; symbol : {symbol}')
+                ufutures_symbols.remove(symbol)
+                continue
 
 
-# load spot_symbols
-_spot = glob.glob(f"raw_klines/*_spot")
+### load spot_symbols ###
+_spot = glob.glob(f"raw_klines_{bar_interval}/*_spot")
 spot_symbols = [i.split('/')[1].split('_spot')[0] for i in _spot]
 spot_broken_list = []
 
-for i in tqdm(spot_symbols):
-    try:
-        df_dict[f'{i}_spot'] = get_tidyData(symbol=i, data_type='spot')
-        if type(df_dict[f'{i}_spot']) == list:
-            spot_broken_list.append(i)
-    except Exception as e:
-        print(f'other error: {e} ; symbol : {i}')
-        spot_symbols.remove(i)
-        continue
+while True:
+    data_type = 'spot'
+    load_again = list(set(spot_symbols) ^ set([i.split(f'_{data_type}')[0] for i in df_dict.keys() if i.split('_')[-1] == data_type]))
+    if len(load_again) == 0:
+        break
+    else:
+        for symbol in tqdm(load_again):
+            try:
+                df_dict[f'{symbol}_{data_type}'] = get_tidyData(symbol=symbol, data_type=data_type, bar_interval=bar_interval)
+                if type(df_dict[f'{symbol}_{data_type}']) == list:
+                    spot_broken_list.append(symbol)
+            except Exception as e:
+                print(f'other error: {e} ; symbol : {symbol}')
+                spot_symbols.remove(symbol)
+                continue
 
 
-# %%
+### re-download broken file ###
 
-# re-download ufutures broken file
 print(f'ufutures_broken_list : {ufutures_broken_list}')
-
-if len(ufutures_broken_list) != 0:
-    for j in ufutures_broken_list:
-        base_url_daily = "https://data.binance.vision/data/futures/um/daily/klines"
-        base_url_monthly = "https://data.binance.vision/data/futures/um/monthly/klines"
-
-        for broken_path in df_dict[f'{j}_ufutures']:
-            info = broken_path.split('/')[-1].replace('_','-').split('-ufutures-')
-            if len(info[1].split('-')) == 2:
-                base_url = base_url_monthly
-            elif len(info[1].split('-')) == 3:
-                base_url = base_url_daily
-
-            url = f"{base_url}/{info[0]}/1m/{info[0]}-1m-{info[1]}"
-            print(url)
-
-            path = os.path.join(parent_dir, f"{info[0]}_ufutures")
-            file_path = os.path.join(path, f"{info[0]}-ufutures-{info[1]}")
-            file_path = file_path.replace("-", "_")
-            os.remove(file_path)
-            time.sleep(1)
-            urllib.request.urlretrieve(url, file_path)
-
-        df_dict[f'{j}_ufutures'] = get_tidyData(symbol=j, data_type='ufutures')
-
-
-# re-download spot broken file
 print(f'spot_broken_list : {spot_broken_list}')
 
-if len(spot_broken_list) != 0:
-    for i in spot_broken_list:
-        base_url_daily = "https://data.binance.vision/data/spot/daily/klines"
-        base_url_monthly = "https://data.binance.vision/data/spot/monthly/klines"
+def urlretrieve_retry(url, file_path, max_attempts=5, delay=1):
 
-        for broken_path in df_dict[f'{i}_spot']:
-            info = broken_path.split('/')[-1].replace('_','-').split('-spot-')
-            if len(info[1].split('-')) == 2:
-                base_url = base_url_monthly
-            elif len(info[1].split('-')) == 3:
-                base_url = base_url_daily
+    last_err = None
 
-            url = f"{base_url}/{info[0]}/1m/{info[0]}-1m-{info[1]}"
-            print(url)
+    for i in range(max_attempts):
+        try:
+            return urllib.request.urlretrieve(url, file_path)
+        except Exception as e:
+            if "Not Found" in str(e):
+                return None
+            last_err = e
+            if i < max_attempts - 1:
+                time.sleep(delay)
 
-            path = os.path.join(parent_dir, f"{info[0]}_spot")
-            file_path = os.path.join(path, f"{info[0]}-spot-{info[1]}")
-            file_path = file_path.replace("-", "_")
-            os.remove(file_path)
-            time.sleep(1)
-            urllib.request.urlretrieve(url, file_path)
+    print(f"Failed to download after {max_attempts} attempts: {url} -> {file_path}: {last_err}")
+    
+    return None
 
-        df_dict[f'{i}_spot'] = get_tidyData(symbol=i, data_type='spot')
+def redownload_data(df_dict, broken_list, data_type):
+
+    if len(broken_list) != 0:
+
+        if data_type == 'ufutures':
+            base_url_daily = "https://data.binance.vision/data/futures/um/daily/klines"
+            base_url_monthly = "https://data.binance.vision/data/futures/um/monthly/klines"
+
+        elif data_type == 'spot':
+            base_url_daily = "https://data.binance.vision/data/spot/daily/klines"
+            base_url_monthly = "https://data.binance.vision/data/spot/monthly/klines"
+
+        for symbol in broken_list:
+            for broken_path in df_dict[f'{symbol}_{data_type}']:
+                info = broken_path.split('/')[-1].replace('_','-').split(f'-{data_type}-')
+                if len(info[1].split('-')) == 2:
+                    base_url = base_url_monthly
+                elif len(info[1].split('-')) == 3:
+                    base_url = base_url_daily
+
+                url = f"{base_url}/{info[0]}/{bar_interval}/{info[0]}-{bar_interval}-{info[1]}"
+                print(url)
+
+                path = f"{parent_dir}/{info[0]}_{data_type}"
+                file_path = f"{path}/{info[0]}-{data_type}-{info[1]}"
+                file_path = file_path.replace("-", "_")
+                os.remove(file_path)
+                time.sleep(1)
+                r = urlretrieve_retry(url, file_path)
+
+            df_dict[f'{symbol}_{data_type}'] = get_tidyData(symbol=symbol, data_type=data_type, bar_interval=bar_interval)
+
+    return df_dict
+
+df_dict = redownload_data(df_dict, ufutures_broken_list, 'ufutures')
+df_dict = redownload_data(df_dict, spot_broken_list, 'spot')
 
 
-# %%
-
-### run error-symbol only ###
-## sometimes get_tidyData cannot success to build a dataframe for some of symbol
-## check those independently
-# df_dict[f'INJUSDT_ufutures'] = get_tidyData(symbol='INJUSDT', data_type='ufutures')
-# df_dict[f'XLMUSDT_spot'] = get_tidyData(symbol='XLMUSDT', data_type='spot')
-# ufutures_symbols = ['INJUSDT']
-# spot_symbols = ['XLMUSDT']
-# spot_symbols = []
-
+### download lacked data ###
 
 for dataList, typeName in zip([ufutures_symbols, spot_symbols], ["ufutures", "spot"]):
 
@@ -120,9 +130,9 @@ for dataList, typeName in zip([ufutures_symbols, spot_symbols], ["ufutures", "sp
         base_url = "https://data.binance.vision/data/spot/daily/klines"
 
     for data in tqdm(dataList):
-        try:
-            df = df_dict[f'{data}_{typeName}']
 
+        try:
+            df = df_dict[f"{data}_{typeName}"]
             start_date = df.index[0].date()
             end_date = df.index[-1].date()
             date_range = pd.date_range(start_date, end_date, freq="D").date
@@ -130,30 +140,24 @@ for dataList, typeName in zip([ufutures_symbols, spot_symbols], ["ufutures", "sp
 
             lacked_day = (list(set(date_range)^set(real_index)))
 
-            if len(lacked_day) >= 10:
+            if len(lacked_day) >= 20:
                 print(f'too much lacked_day in monthly data : {data} {len(lacked_day)}')
-                # continue
         
             if len(lacked_day) != 0:
-
-                path = os.path.join(parent_dir, f"{data}_{typeName}")
+                path = f"{parent_dir}/{data}_{typeName}"
 
                 for date in tqdm(lacked_day):
-
                     date = str(date)
-                    url = f"{base_url}/{data}/1m/{data}-1m-{date}.zip"
-
-                    file_path = os.path.join(path, f"{data}-{typeName}-{date}.zip")
+                    url = f"{base_url}/{data}/{bar_interval}/{data}-{bar_interval}-{date}.zip"
+                    file_path = f"{path}/{data}-{typeName}-{date}.zip"
                     file_path = file_path.replace("-", "_")
 
                     if not os.path.exists(file_path):
-                        try:
-                            urllib.request.urlretrieve(url, file_path)
+                        r = urlretrieve_retry(url, file_path)
+
+                        if r is not None:
                             print(f"add : {data} {date}")
-                        except:
-                            continue
 
         except Exception as e:
-            print(f'{data}_{typeName} error : {e}') ## hand check each error-symbol
+            print(f'[hand check] {data}_{typeName} error : {e}') ## hand check error-symbol
             continue
-
