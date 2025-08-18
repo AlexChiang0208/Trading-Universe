@@ -7,14 +7,17 @@ import statsmodels.api as sm
 plt.style.use("seaborn-whitegrid")
 
 
-def calc_performance_index_func(percent_return_series, days_of_year=365):
+def calc_performance_index_func(percent_return_series, days_of_year=365, is_leverage=False):
 
     if str(percent_return_series.index.freq)!='<Day>':
         percent_return_series=percent_return_series.resample('1d').sum()
 
     cum_return_percent_data=percent_return_series.cumsum()
 
-    mdd=(cum_return_percent_data.cummax()-cum_return_percent_data).max()
+    if is_leverage == False:
+        mdd=(cum_return_percent_data.cummax()-cum_return_percent_data).max()
+    else:
+        mdd=abs((cum_return_percent_data / cum_return_percent_data.cummax() - 1).min()) * 100
 
     return_std=(percent_return_series).std()
     return_downside_std=(percent_return_series * (percent_return_series<0)).std()
@@ -53,7 +56,7 @@ class PercentageReturnPlot:
     def __init__(self, percent_return_series):
         self.percent_return_series = percent_return_series
 
-    def equity_plot(self, Name,text_position='2022-01-01',fillylim=None,ctoc=False):
+    def equity_plot(self, Name, fillylim=None, ctoc=False, is_leverage=False):
 
         percent_return_series = self.percent_return_series
         fig = plt.figure(figsize=(16,9),constrained_layout=False)
@@ -62,7 +65,7 @@ class PercentageReturnPlot:
             if str(percent_return_series.index.freq)!='<Day>':
                 percent_return_series=percent_return_series.resample('1d').sum()
 
-        performance_index_dict = calc_performance_index_func(percent_return_series)
+        performance_index_dict = calc_performance_index_func(percent_return_series, is_leverage=is_leverage)
 
         cum_return_percent_data=percent_return_series.cumsum()
         highest_cond=(cum_return_percent_data!=cum_return_percent_data.shift(1)) & (cum_return_percent_data==cum_return_percent_data.cummax()) & (cum_return_percent_data!=0)
@@ -82,11 +85,11 @@ class PercentageReturnPlot:
         ax0.scatter(new_highest_index,
             cum_return_percent_data.loc[new_highest_index], c='#02ff0f', s=50,alpha=1,edgecolor='green',label='New Equity High')
 
-        ax0.text(pd.to_datetime(text_position),cum_return_percent_data.min(),'Return: {}%'.format((round((cum_return_percent_data[-1]),2)))+\
+        ax0.text(0.7, 0.08, 'Return: {}%'.format((round((cum_return_percent_data[-1]),2)))+\
         '\nMDD:{0}%'.format(round(mdd,2))+\
         '\nSortino Ratio: {}'.format(sortino_ratio)+\
         '\nSharpe Ratio: {}'.format(sharpe_ratio)+\
-        '\nCalmar Ratio:{}'.format(calmar_ratio),fontsize=16)
+        '\nCalmar Ratio:{}'.format(calmar_ratio),fontsize=16, transform=plt.gca().transAxes)
 
         plt.yticks(fontsize=12)
         plt.title('{} Return&MDD'.format(Name),fontsize=16)
@@ -94,8 +97,12 @@ class PercentageReturnPlot:
         plt.ylabel('Return%')
 
         ax1 = fig.add_subplot(spec[1])
-        fill_data=(-(cum_return_percent_data.cummax()-cum_return_percent_data))
-        
+
+        if is_leverage == False:
+            fill_data=(-(cum_return_percent_data.cummax()-cum_return_percent_data))
+        else:
+            fill_data=((cum_return_percent_data / cum_return_percent_data.cummax() - 1) * 100)
+
         ax1.fill_between(x=fill_data.index,y1=fill_data,alpha=0.5,color='r',label='DD')
         ax1.plot(fill_data.index,fill_data,color='r')
         
@@ -108,7 +115,7 @@ class PercentageReturnPlot:
         plt.yticks(fontsize=12)
         plt.show();
 
-    def Month_equity_plot(self, Name, text_position='2022-01-01',days_of_year=365):
+    def Month_equity_plot(self, Name, days_of_year=365):
 
         daily_return = self.percent_return_series
 
@@ -142,13 +149,13 @@ class PercentageReturnPlot:
         axes.plot(cum_port_return,marker='o')
         plt.xticks(rotation='vertical');
 
-        plt.text(pd.to_datetime(text_position).strftime('%B-%Y'),cum_port_return.min()+25,
-                 'Max Monthly Return: {}%'.format(bar_return.max()['pos'].round(2))+\
+        plt.text(0.7, 0.08,
+                'Max Monthly Return: {}%'.format(bar_return.max()['pos'].round(2))+\
                 '\nMax Monthly Loss:   {0}%'.format(bar_return.min()['neg'].round(2))+\
                 '\n'+\
                 '\nAnnualized Return:{0}%'.format(round((cum_port_return.diff(1).fillna(cum_port_return[0]).mean()*12),2))+\
                 '\nAnnualized Shapre Ratio:{}'.format(ann_sharpe)
-                ,fontsize=16);
+                ,fontsize=16, transform=plt.gca().transAxes);
 
     def Daily_Distribution_plot(self, Name, bins=40):
 
@@ -230,11 +237,11 @@ class Performance:
         self.equity_realized[['profit', 'profitfee']].plot(grid=True, figsize=(12, 5), title='Profit and Loss (Realized)')
         plt.show();
 
-    def draw_equity_curve(self, text_position='2022-01-01', fillylim=None, ctoc=False):
-        return self.JiaWeiPlot.equity_plot(Name=self.Name, text_position=text_position, fillylim=fillylim, ctoc=ctoc)
+    def draw_equity_curve(self, fillylim=None, ctoc=False, is_leverage=False):
+        return self.JiaWeiPlot.equity_plot(Name=self.Name, fillylim=fillylim, ctoc=ctoc, is_leverage=is_leverage)
 
-    def draw_monthly_equity(self, text_position='2022-01-01',days_of_year=365):
-        return self.JiaWeiPlot.Month_equity_plot(Name=self.Name, text_position=text_position,days_of_year=days_of_year)
+    def draw_monthly_equity(self, days_of_year=365):
+        return self.JiaWeiPlot.Month_equity_plot(Name=self.Name, days_of_year=days_of_year)
 
     def draw_daily_distribution(self, bins=40):
         return self.JiaWeiPlot.Daily_Distribution_plot(Name=self.Name, bins=bins)
@@ -255,9 +262,9 @@ class Performance:
         plt.title('Price Movement',fontsize  = 16)
         plt.show();
 
-    def show_performance(self, days_of_year=365):
+    def show_performance(self, days_of_year=365, is_leverage=False):
 
-        performance_index_dict = calc_performance_index_func(self.percent_return_series, days_of_year)
+        performance_index_dict = calc_performance_index_func(self.percent_return_series, days_of_year, is_leverage)
 
         tradeTimes = len(self.tradePeriod)
         max_tradePeriod = max(self.tradePeriod)
@@ -312,10 +319,16 @@ def create_position_series(output_dict, time_index):
     position_ts = np.zeros(len(time_index))
 
     for i in range(len(buy)):
-        position_ts[buy[i]:sell[i]+1] = 1
+        try:
+            position_ts[buy[i]:sell[i]+1] = 1
+        except:
+            position_ts[buy[i]:] = 1
 
     for i in range(len(sellshort)):
-        position_ts[sellshort[i]:buytocover[i]+1] = -1
+        try:
+            position_ts[sellshort[i]:buytocover[i]+1] = -1
+        except:
+            position_ts[sellshort[i]:] = -1
 
     position_ts = pd.Series(position_ts, index=time_index)
 
